@@ -1,99 +1,71 @@
 /**
  * ==============================================================
- * APP.JS — Sistem Rekonsiliasi Nota BBM Pertamina (Fixed Build)
- * Fitur: Password Guard, Robust Filter & Sort, Smart Drive Link Detector
- * Compatible dengan GitHub Pages & Static Web Host
+ * APP.JS — Sistem Rekonsiliasi Nota BBM Pertamina
+ * Fitur: Display Jumlah Voucher, Fuzzy Matching OCR, Auto-Select Dropdown
  * ==============================================================
  */
 
 const APP_PASSWORD = "Persediaan123";
 
+// Opsi BBM beserta Nominal Per Kupon
 const BBM_TYPES = [
-    { name: "PERTAMAX TURBO", keywords: ["PERTAMAX TURBO", "TURBO"] },
-    { name: "PERTAMAX 100.000 (SPBU PIRAMID)", keywords: ["SPBU PIRAMID", "PIRAMID", "PERTAMAX 100"] },
-    { name: "PERTAMAX", keywords: ["PERTAMAX", "PERTAMAX 92"] },
-    { name: "PERTALITE", keywords: ["PERTALITE", "P_LITE"] },
-    { name: "DEXLITE", keywords: ["DEXLITE"] },
-    { name: "PERTAMINA DEX", keywords: ["PERTAMINA DEX", "PERTAMINA-DEX", "P. DEX", "P_DEX", "DEX"] },
-    { name: "SOLAR", keywords: ["SOLAR", "BIOSOLAR", "BIO SOLAR"] },
+    { name: "PERTAMAX 20.000", nominalKupon: 20000, keywords: ["PERTAMAX 20", "20.000", "20000"] },
+    { name: "PERTAMAX 100.000 (SPBU PIRAMID)", nominalKupon: 100000, keywords: ["PIRAMID", "100.000", "100000"] },
+    { name: "PERTAMAX 200.000", nominalKupon: 200000, keywords: ["PERTAMAX 200", "200.000", "200000"] },
+    { name: "DEXLITE 200.000", nominalKupon: 200000, keywords: ["DEXLITE 200", "DEXLITE"] },
+    { name: "PERTAMINA DEX 200.000", nominalKupon: 200000, keywords: ["PERTAMINA DEX", "DEX 200"] }
 ];
 
-const DEFAULT_LLM_WHISPERER_KEY = "uf3mDFBoCCQNyVhE0XrJPQ_exEH5zlPTXIVGSMCGNjM";
-let activeApiKey = DEFAULT_LLM_WHISPERER_KEY;
-let remoteBaseUrl = "https://llmwhisperer-api.us-central.unstract.com/api/v2";
+// Pemetaan Otomatis Kendaraan -> BBM & Kata Kunci Pencarian OCR
+const KENDARAAN_RULES = [
+    { plat: "AVANZA 86 B", keywords: ["86 B", "86B", "AVANZA 86"], bbm: "PERTAMAX 200.000" },
+    { plat: "JEMPOL 1132 BI", keywords: ["1132", "JEMPOL"], bbm: "PERTAMAX 100.000 (SPBU PIRAMID)" },
+    { plat: "PICK UP 8243 UA", keywords: ["8243", "PICK UP", "PICKUP"], bbm: "PERTAMAX 200.000" },
+    { plat: "SAMLING 7110 UA", keywords: ["7110", "SAMLING"], bbm: "DEXLITE 200.000" },
+    { plat: "L300 AB8073BI", keywords: ["8073", "L300", "AB8073BI"], bbm: "DEXLITE 200.000" },
+    { plat: "AVANZA 1000 IS", keywords: ["1000 IS", "1000IS", "1000"], bbm: "PERTAMAX 200.000" },
+    { plat: "SUPRA 2112 IA", keywords: ["2112 IA", "2112IA"], bbm: "PERTAMAX 20.000" },
+    { plat: "SUPRA 2112 UB", keywords: ["2112 UB", "2112UB"], bbm: "PERTAMAX 20.000" },
+    { plat: "SUPRA 2859 IS", keywords: ["2859", "SUPRA 2859"], bbm: "PERTAMAX 20.000" },
+    { plat: "GODOOR 2422 IF", keywords: ["2422", "GODOOR"], bbm: "PERTAMAX 20.000" },
+    { plat: "GENZET", keywords: ["GENZET", "GENSET"], bbm: "DEXLITE 200.000" }
+];
 
-const SPREADSHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzgkUMeWa1ha0j7LpwEuevDhzSyuWl2BnKMffAiojUuzLNCckpoLgvhoWTjF-KKf2Rm4w/exec";
+const SPREADSHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycby9OO1lhr7de9BrOpn-8BShjUu4p5YZ_6cySF8a3fyhn-2ibp_DHVTvrpCop2PLQsy0-w/exec";
 
 let databaseNota = [];
-let tempCurrentBase64 = ""; // Menampung sementara foto nota yang diupload
+let tempCurrentBase64 = "";
 
 const BADGE_CLASS_MAP = {
-    'PERTAMAX TURBO': 'badge-turbo',
+    'PERTAMAX 20.000': 'badge-pertalite',
     'PERTAMAX 100.000 (SPBU PIRAMID)': 'badge-pertamax',
-    'PERTAMAX': 'badge-pertamax',
-    'PERTALITE': 'badge-pertalite',
-    'DEXLITE': 'badge-dexlite',
-    'PERTAMINA DEX': 'badge-dex',
-    'SOLAR': 'badge-solar'
+    'PERTAMAX 200.000': 'badge-pertamax',
+    'DEXLITE 200.000': 'badge-dexlite',
+    'PERTAMINA DEX 200.000': 'badge-dex'
 };
 
 function muatDataDariSpreadsheet() {
     if (!SPREADSHEET_WEBAPP_URL) return;
 
-    console.log("Memuat data dari Google Sheets...");
-    fetch(SPREADSHEET_WEBAPP_URL)
+    // Tambahkan timestamp anti-cache agar browser selalu mengambil data paling segar
+    const fetchUrl = SPREADSHEET_WEBAPP_URL + "?nocache=" + new Date().getTime();
+
+    console.log("Memuat data dari Google Sheets...", fetchUrl);
+
+    fetch(fetchUrl)
         .then(res => res.json())
         .then(data => {
+            console.log("Data diterima dari Spreadsheet:", data);
             if (Array.isArray(data)) {
                 databaseNota = data;
                 renderTabel();
+            } else if (data.status === "error") {
+                alert("Error Spreadsheet: " + data.message);
             }
         })
-        .catch(err => console.error("Gagal memuat data:", err));
-}
-
-function dataURLtoBlob(dataurl) {
-    const arr = dataurl.split(',');
-    const mime = arr[0].match(/:(.*?);/)[1];
-    const bstr = atob(arr[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    while (n--) {
-        u8arr[n] = bstr.charCodeAt(n);
-    }
-    return new Blob([u8arr], { type: mime });
-}
-
-async function pollAndRetrieve(whisperHash, apiKey) {
-    const apiBase = (window.location.port === "8080") ? "/api" : remoteBaseUrl;
-
-    const statusUrl = (apiBase === "/api")
-        ? `${apiBase}/whisper-status?whisper_hash=${whisperHash}`
-        : `${remoteBaseUrl}/whisper-status?whisper_hash=${whisperHash}`;
-
-    const retrieveUrl = (apiBase === "/api")
-        ? `${apiBase}/whisper-retrieve?whisper_hash=${whisperHash}`
-        : `${remoteBaseUrl}/whisper-retrieve?whisper_hash=${whisperHash}`;
-
-    const headers = { "unstract-key": apiKey };
-    const scanStatus = document.getElementById('scanStatus');
-
-    while (true) {
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        if (scanStatus) scanStatus.innerText = "Memproses OCR (Menunggu antrean)...";
-
-        const statusResponse = await fetch(statusUrl, { headers });
-        if (!statusResponse.ok) throw new Error(`Status OCR gagal: ${statusResponse.status}`);
-
-        const statusData = await statusResponse.json();
-        if (statusData.status === "processed") {
-            const retrieveResponse = await fetch(retrieveUrl, { headers });
-            const retrieveData = await retrieveResponse.json();
-            return retrieveData.result_text;
-        } else if (statusData.status === "failed") {
-            throw new Error("Proses ekstraksi OCR gagal.");
-        }
-    }
+        .catch(err => {
+            console.error("Gagal memuat data dari Spreadsheet:", err);
+        });
 }
 
 function kompresDanUbahKeBase64(fileMentah) {
@@ -106,8 +78,7 @@ function kompresDanUbahKeBase64(fileMentah) {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
                 const maxDimensi = 1000;
-                let lebar = img.width;
-                let tinggi = img.height;
+                let lebar = img.width, tinggi = img.height;
 
                 if (lebar > tinggi && lebar > maxDimensi) {
                     tinggi *= maxDimensi / lebar;
@@ -120,8 +91,7 @@ function kompresDanUbahKeBase64(fileMentah) {
                 canvas.width = lebar;
                 canvas.height = tinggi;
                 ctx.drawImage(img, 0, 0, lebar, tinggi);
-                const base64Kompres = canvas.toDataURL('image/jpeg', 0.75);
-                resolve(base64Kompres);
+                resolve(canvas.toDataURL('image/jpeg', 0.75));
             };
             img.onerror = () => reject(new Error("Format file tidak didukung."));
             img.src = event.target.result;
@@ -130,66 +100,79 @@ function kompresDanUbahKeBase64(fileMentah) {
     });
 }
 
-function highlightInput(id) {
-    const el = document.getElementById(id);
-    if (el) {
-        el.classList.add('highlight-input');
-        setTimeout(() => el.classList.remove('highlight-input'), 1000);
-    }
-}
-
 function parseNotaText(rawText) {
-    const text = rawText.toUpperCase().replace(/\s+/g, ' ');
+    const rawUpper = rawText.toUpperCase();
+    const cleanText = rawUpper.replace(/[^A-Z0-9]/g, '');
     let hasil = { no: '', tanggal: new Date().toISOString().split('T')[0], bbm: '', plat: '', total: 0 };
 
-    const polaNo = text.match(/(?:NO\.?\s*TRANS(?:AKSI)?|NO\.?\s*NOTA|TRANS(?:AKSI)?|NOTA|RESI|TICKET|TKT)[:\s#]*([A-Z0-9\/\.\-]+)/i);
+    const polaNo = rawUpper.match(/(?:NO\.?\s*TRANS(?:AKSI)?|NO\.?\s*NOTA|TRANS(?:AKSI)?|NOTA|RESI|TICKET|TKT)[:\s#]*([A-Z0-9\/\.\-]+)/i);
     if (polaNo && polaNo[1]) {
         hasil.no = polaNo[1].replace(/[:#\s]/g, '').trim();
     }
 
-    for (const bbm of BBM_TYPES) {
-        if (bbm.keywords.some(k => text.includes(k))) {
-            hasil.bbm = bbm.name;
+    for (const item of KENDARAAN_RULES) {
+        const isMatch = item.keywords.some(kw => {
+            const cleanKw = kw.replace(/[^A-Z0-9]/g, '');
+            return rawUpper.includes(kw) || cleanText.includes(cleanKw);
+        });
+
+        if (isMatch) {
+            hasil.plat = item.plat;
+            hasil.bbm = item.bbm;
             break;
+        }
+    }
+
+    if (!hasil.bbm) {
+        if (rawUpper.includes("PIRAMID") || rawUpper.includes("PIRAMIDA")) {
+            hasil.bbm = "PERTAMAX 100.000 (SPBU PIRAMID)";
+        } else if (rawUpper.includes("DEXLITE")) {
+            hasil.bbm = "DEXLITE 200.000";
+        } else if (rawUpper.includes("PERTAMINA DEX") || rawUpper.includes("P.DEX")) {
+            hasil.bbm = "PERTAMINA DEX 200.000";
+        } else if (rawUpper.includes("PERTAMAX")) {
+            hasil.bbm = "PERTAMAX 200.000";
         }
     }
 
     const regexHarga = /(?:TOTAL(?:\s*HARGA)?|CASH|BAYAR|RUPIAH|RP)[^0-9]*?(\d[\d\.,]*(?:\s+\d{3})*)/gi;
     let matchHarga, maxTotal = 0;
-    while ((matchHarga = regexHarga.exec(text)) !== null) {
+    while ((matchHarga = regexHarga.exec(rawUpper)) !== null) {
         if (matchHarga[1]) {
             const nominal = parseInt(matchHarga[1].replace(/[^0-9]/g, ''), 10);
-            if (!isNaN(nominal) && nominal < 2000000 && nominal > maxTotal) maxTotal = nominal;
+            if (!isNaN(nominal) && nominal < 5000000 && nominal > maxTotal) maxTotal = nominal;
         }
     }
     if (maxTotal > 1000) hasil.total = maxTotal;
 
-    const polaPlatLabel = text.match(/(?:NO\.?\s*POL(?:ISI)?|PLAT|KENDARAAN|VEHICLE)[:\s]*([A-Z]{1,2}\s*\d{1,5}\s*[A-Z]{0,3})/i);
-    if (polaPlatLabel && polaPlatLabel[1]) hasil.plat = polaPlatLabel[1].trim();
-
-    const polaTanggal = text.match(/(\d{2})[-/](\d{2})[-/](\d{2,4})/);
+    const polaTanggal = rawUpper.match(/(\d{2})[-/](\d{2})[-/](\d{2,4})/);
     if (polaTanggal) {
         let thn = polaTanggal[3].length === 2 ? "20" + polaTanggal[3] : polaTanggal[3];
-        hasil.tanggal = `${thn}-${polaTanggal[2]}-${polaTanggal[1]}`;
+        hasil.tanggal = `${thn}-${polaTanggal[2].padStart(2, '0')}-${polaTanggal[1].padStart(2, '0')}`;
     }
 
     return hasil;
 }
 
-// Buka Modal Foto (Base64)
+function hitungJumlahKupon(totalHarga, jenisBbm) {
+    let nominalPerKupon = 20000;
+    if (jenisBbm.includes("100.000")) nominalPerKupon = 100000;
+    else if (jenisBbm.includes("200.000")) nominalPerKupon = 200000;
+
+    const jumlahKupon = Math.floor(totalHarga / nominalPerKupon) || 1;
+    const sisa = totalHarga % nominalPerKupon;
+    return { jumlahKupon, nominalPerKupon, sisa };
+}
+
 function bukaModalFoto(index) {
     const item = databaseNota[index];
     if (!item || (!item.foto && !item.fotoUrl)) {
         alert("Foto tidak tersedia untuk transaksi ini.");
         return;
     }
-
     const modal = document.getElementById('photoViewerModal');
-    const modalImg = document.getElementById('modalPhotoImage');
-    const modalTitle = document.getElementById('modalPhotoTitle');
-
-    modalTitle.innerText = `Nota: ${item.no} (${item.plat})`;
-    modalImg.src = item.foto || item.fotoUrl;
+    document.getElementById('modalPhotoTitle').innerText = `Nota: ${item.no} (${item.plat})`;
+    document.getElementById('modalPhotoImage').src = item.foto || item.fotoUrl;
     modal.style.display = 'flex';
 }
 
@@ -202,7 +185,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginModal = document.getElementById('loginModal');
     const loginForm = document.getElementById('loginForm');
     const appPasswordInput = document.getElementById('appPassword');
-    const loginError = document.getElementById('loginError');
     const mainContainer = document.getElementById('mainContainer');
 
     function izinkanAkses() {
@@ -220,7 +202,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 sessionStorage.setItem('isAuthenticated', 'true');
                 izinkanAkses();
             } else {
-                if (loginError) loginError.style.display = 'block';
+                document.getElementById('loginError').style.display = 'block';
+            }
+        });
+    }
+
+    const platSelect = document.getElementById('platNomor');
+    if (platSelect) {
+        platSelect.addEventListener('change', (e) => {
+            const val = e.target.value;
+            const matchRule = KENDARAAN_RULES.find(r => r.plat === val);
+            if (matchRule) {
+                document.getElementById('jenisBbm').value = matchRule.bbm;
             }
         });
     }
@@ -235,14 +228,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (scanStatus) {
             scanStatus.style.display = 'block';
-            scanStatus.innerText = "Mengompres gambar & memproses OCR via Backend...";
+            scanStatus.innerText = "Mengompres gambar & memproses OCR...";
         }
 
         try {
             const fullBase64 = await kompresDanUbahKeBase64(file);
             tempCurrentBase64 = fullBase64;
 
-            // Kirim base64 ke Google Apps Script untuk diproses OCR
             const response = await fetch(SPREADSHEET_WEBAPP_URL, {
                 method: "POST",
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -250,18 +242,24 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             const data = await response.json();
-
-            if (data.status === "error") {
-                throw new Error(data.message);
-            }
+            if (data.status === "error") throw new Error(data.message);
 
             if (data.text) {
                 const hasil = parseNotaText(data.text);
+
                 if (hasil.no) document.getElementById('noTransaksi').value = hasil.no;
                 if (hasil.tanggal) document.getElementById('tanggalNota').value = hasil.tanggal;
-                if (hasil.bbm) document.getElementById('jenisBbm').value = hasil.bbm;
-                if (hasil.plat) document.getElementById('platNomor').value = hasil.plat;
                 if (hasil.total > 0) document.getElementById('totalHarga').value = hasil.total;
+
+                if (hasil.plat) {
+                    const elPlat = document.getElementById('platNomor');
+                    elPlat.value = hasil.plat;
+                    elPlat.dispatchEvent(new Event('change'));
+                }
+
+                if (hasil.bbm) {
+                    document.getElementById('jenisBbm').value = hasil.bbm;
+                }
 
                 if (scanStatus) scanStatus.innerText = "Selesai! Silakan verifikasi data.";
             }
@@ -281,24 +279,23 @@ document.addEventListener('DOMContentLoaded', () => {
             const no = document.getElementById('noTransaksi').value.trim();
             const tanggal = document.getElementById('tanggalNota').value;
             const bbm = document.getElementById('jenisBbm').value;
-            const plat = document.getElementById('platNomor').value.trim().toUpperCase();
+            const plat = document.getElementById('platNomor').value;
             const total = parseInt(document.getElementById('totalHarga').value, 10);
 
-            // Cek Duplikasi Transaksi
             if (databaseNota.some(item => item.no === no)) {
                 alert(`⚠️ PERINGATAN REKONSILIASI:\nNomor transaksi ${no} sudah pernah diinput sebelumnya!`);
                 return;
             }
 
-            const newNota = { no, tanggal, bbm, plat, total, foto: tempCurrentBase64 };
+            const { jumlahKupon } = hitungJumlahKupon(total, bbm);
+            const newNota = { no, tanggal, bbm, plat, total, foto: tempCurrentBase64, kupon: jumlahKupon };
 
             if (SPREADSHEET_WEBAPP_URL) {
                 const submitBtn = formNota.querySelector('.btn-submit');
                 const originalText = submitBtn.innerText;
                 submitBtn.disabled = true;
-                submitBtn.innerText = "Menyimpan ke Sheets...";
+                submitBtn.innerText = "Menyimpan...";
 
-                // Mengirimkan payload JSON dengan text/plain agar tidak memicu CORS Preflight Error di Apps Script
                 fetch(SPREADSHEET_WEBAPP_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -306,41 +303,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 })
                     .then(res => res.json())
                     .then(response => {
-                        if (response.status === "error") {
-                            throw new Error(response.message);
-                        }
-
-                        console.log("Data berhasil dikirim. Memuat ulang data...");
-
-                        setTimeout(() => {
-                            muatDataDariSpreadsheet();
-                        }, 1000);
+                        if (response.status === "error") throw new Error(response.message);
+                        setTimeout(() => muatDataDariSpreadsheet(), 1000);
 
                         formNota.reset();
                         tempCurrentBase64 = "";
                         if (fileNota) fileNota.value = '';
                         if (fileNotaKamera) fileNotaKamera.value = '';
                         if (scanStatus) scanStatus.style.display = 'none';
-                        alert("✅ Data nota berhasil disimpan!");
+                        alert(`✅ Data nota berhasil disimpan! (${jumlahKupon} voucher)`);
                     })
-                    .catch(err => {
-                        console.error("Gagal menyimpan ke Sheets:", err);
-                        alert("Gagal menyimpan ke Google Sheets: " + err.message);
-                    })
+                    .catch(err => alert("Gagal menyimpan: " + err.message))
                     .finally(() => {
                         submitBtn.disabled = false;
                         submitBtn.innerText = originalText;
                     });
-            } else {
-                databaseNota.push(newNota);
-                renderTabel();
-                formNota.reset();
-                tempCurrentBase64 = "";
             }
         });
     }
 
-    // LISTENER EVENT FILTER DAN SORTING
     const fByMonth = document.getElementById('filterBulan');
     const fByBbm = document.getElementById('filterBbm');
     const fByPlat = document.getElementById('filterKendaraan');
@@ -352,7 +333,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (sBy) sBy.addEventListener('change', renderTabel);
 });
 
-// FUNGSI RENDER TABEL (FILTER & SORT LENGKAP)
+// Ganti bagian renderTabel() di app.js Anda dengan ini:
 function renderTabel() {
     const tbody = document.getElementById('tabelBody');
     if (!tbody) return;
@@ -364,58 +345,75 @@ function renderTabel() {
 
     let filteredData = [...databaseNota];
 
+    // Filter Bulan
     if (filterBulan) {
         filteredData = filteredData.filter(item => item.tanggal && item.tanggal.startsWith(filterBulan));
     }
+
+    // Filter BBM (Support Partial Match)
     if (filterBbm) {
-        filteredData = filteredData.filter(item => item.bbm === filterBbm);
+        filteredData = filteredData.filter(item => {
+            if (!item.bbm) return false;
+            return item.bbm.toUpperCase().includes(filterBbm.toUpperCase()) || filterBbm.toUpperCase().includes(item.bbm.toUpperCase());
+        });
     }
+
+    // Filter Kendaraan
     if (filterKendaraan) {
         filteredData = filteredData.filter(item => item.plat && item.plat.toUpperCase().includes(filterKendaraan));
     }
 
+    // Sorting Data
     filteredData.sort((a, b) => {
         if (sortBy === 'tanggal-asc') return new Date(a.tanggal) - new Date(b.tanggal);
         if (sortBy === 'tanggal-desc') return new Date(b.tanggal) - new Date(a.tanggal);
-        if (sortBy === 'bbm-asc') return (a.bbm || '').localeCompare(b.bbm || '');
-        if (sortBy === 'bbm-desc') return (b.bbm || '').localeCompare(a.bbm || '');
-        if (sortBy === 'plat-asc') return (a.plat || '').localeCompare(b.plat || '');
-        if (sortBy === 'plat-desc') return (b.plat || '').localeCompare(a.plat || '');
-        if (sortBy === 'harga-asc') return a.total - b.total;
-        if (sortBy === 'harga-desc') return b.total - a.total;
+        if (sortBy === 'harga-asc') return (a.total || 0) - (b.total || 0);
+        if (sortBy === 'harga-desc') return (b.total || 0) - (a.total || 0);
         return 0;
     });
 
     tbody.innerHTML = '';
     let totalHarga = 0;
+    let totalKupon = 0;
 
     filteredData.forEach((item) => {
-        totalHarga += item.total;
-        const badgeClass = BADGE_CLASS_MAP[item.bbm] || 'badge-default';
+        const nominal = Number(item.total) || 0;
+        totalHarga += nominal;
 
+        // Hitung kupon jika belum ada
+        let jmlKupon = Number(item.kupon);
+        if (!jmlKupon || isNaN(jmlKupon)) {
+            let nominalPerKupon = 20000;
+            if (item.bbm && item.bbm.includes("100.000")) nominalPerKupon = 100000;
+            else if (item.bbm && item.bbm.includes("200.000")) nominalPerKupon = 200000;
+            jmlKupon = Math.floor(nominal / nominalPerKupon) || 1;
+        }
+        totalKupon += jmlKupon;
+
+        const badgeClass = BADGE_CLASS_MAP[item.bbm] || 'badge-default';
         let tombolFotoHtml = `<span style="color:#94a3b8; font-size:12px;">Tanpa Foto</span>`;
 
         if (item.fotoUrl && String(item.fotoUrl).startsWith("http")) {
-            tombolFotoHtml = `<a href="${item.fotoUrl}" target="_blank" class="btn-view-photo" style="text-decoration:none; display:inline-block;">🔗 Buka Foto Drive</a>`;
+            tombolFotoHtml = `<a href="${item.fotoUrl}" target="_blank" class="btn-view-photo">🔗 Foto Drive</a>`;
         } else if (item.foto && String(item.foto).startsWith("data:image")) {
             const originalIndex = databaseNota.indexOf(item);
-            tombolFotoHtml = `<button class="btn-view-photo" onclick="bukaModalFoto(${originalIndex})">👁️ Lihat Foto</button>`;
+            tombolFotoHtml = `<button class="btn-view-photo" onclick="bukaModalFoto(${originalIndex})">👁️ Foto</button>`;
         }
 
         tbody.innerHTML += `
             <tr>
-                <td class="txt-transaksi">${item.no}</td>
-                <td>${item.tanggal}</td>
-                <td><span class="badge ${badgeClass}">${item.bbm}</span></td>
-                <td>${item.plat}</td>
-                <td class="text-right" style="font-weight:600">Rp${item.total.toLocaleString('id-ID')}</td>
+                <td class="txt-transaksi">${item.no || '-'}</td>
+                <td>${item.tanggal || '-'}</td>
+                <td><span class="badge ${badgeClass}">${item.bbm || '-'}</span></td>
+                <td>${item.plat || '-'}</td>
+                <td class="text-center" style="font-weight:700; color:#2563eb;">${jmlKupon} lbr</td>
+                <td class="text-right" style="font-weight:600">Rp${nominal.toLocaleString('id-ID')}</td>
                 <td class="text-center">${tombolFotoHtml}</td>
             </tr>
         `;
     });
 
-    const summaryTotalNota = document.getElementById('summaryTotalNota');
-    const summaryTotalHarga = document.getElementById('summaryTotalHarga');
-    if (summaryTotalNota) summaryTotalNota.innerText = filteredData.length;
-    if (summaryTotalHarga) summaryTotalHarga.innerText = `Rp${totalHarga.toLocaleString('id-ID')}`;
+    if (document.getElementById('summaryTotalNota')) document.getElementById('summaryTotalNota').innerText = filteredData.length;
+    if (document.getElementById('summaryTotalKupon')) document.getElementById('summaryTotalKupon').innerText = `${totalKupon} Lembar`;
+    if (document.getElementById('summaryTotalHarga')) document.getElementById('summaryTotalHarga').innerText = `Rp${totalHarga.toLocaleString('id-ID')}`;
 }

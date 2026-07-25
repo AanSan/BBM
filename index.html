@@ -82,21 +82,32 @@
                         <input type="date" id="tanggalNota" required>
                     </div>
                     <div class="form-group">
-                        <label for="jenisBbm">Jenis BBM</label>
-                        <select id="jenisBbm" required>
-                            <option value="">-- Pilih BBM --</option>
-                            <option value="PERTAMAX TURBO">PERTAMAX TURBO</option>
-                            <option value="PERTAMAX">PERTAMAX</option>
-                            <option value="PERTAMAX 100.000 (SPBU PIRAMID)">PERTAMAX 100.000 (SPBU PIRAMID)</option>
-                            <option value="PERTALITE">PERTALITE</option>
-                            <option value="DEXLITE">DEXLITE</option>
-                            <option value="PERTAMINA DEX">PERTAMINA DEX</option>
-                            <option value="SOLAR">SOLAR</option>
+                        <label for="platNomor">Nomor Kendaraan (Plat)</label>
+                        <select id="platNomor" required>
+                            <option value="">-- Pilih Kendaraan --</option>
+                            <option value="AVANZA 86 B">Avanza 86 B</option>
+                            <option value="JEMPOL 1132 BI">Jempol 1132 BI</option>
+                            <option value="PICK UP 8243 UA">Pick Up 8243 UA</option>
+                            <option value="SAMLING 7110 UA">Samling 7110 UA</option>
+                            <option value="L300 AB8073BI">L300 AB8073BI</option>
+                            <option value="AVANZA 1000 IS">Avanza 1000 IS</option>
+                            <option value="SUPRA 2112 IA">Supra 2112 IA</option>
+                            <option value="SUPRA 2112 UB">Supra 2112 UB</option>
+                            <option value="SUPRA 2859 IS">Supra 2859 IS</option>
+                            <option value="GODOOR 2422 IF">Godoor 2422 IF</option>
+                            <option value="GENZET">Genzet</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="platNomor">Nomor Kendaraan (Plat)</label>
-                        <input type="text" id="platNomor" required placeholder="Contoh: AB 1234 XX">
+                        <label for="jenisBbm">Jenis BBM / Voucher</label>
+                        <select id="jenisBbm" required>
+                            <option value="">-- Pilih Jenis BBM --</option>
+                            <option value="PERTAMAX 20.000">PERTAMAX 20.000 (Motor)</option>
+                            <option value="PERTAMAX 100.000 (SPBU PIRAMID)">PERTAMAX 100.000 (SPBU PIRAMID)</option>
+                            <option value="PERTAMAX 200.000">PERTAMAX 200.000</option>
+                            <option value="DEXLITE 200.000">DEXLITE 200.000</option>
+                            <option value="PERTAMINA DEX 200.000">PERTAMINA DEX 200.000</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label for="totalHarga">Total Harga (Rp)</label>
@@ -113,6 +124,10 @@
                         <div id="summaryTotalNota" class="summary-value">0</div>
                     </div>
                     <div class="summary-box green-box">
+                        <span class="summary-title">Total Voucher</span>
+                        <div id="summaryTotalKupon" class="summary-value">0 Lembar</div>
+                    </div>
+                    <div class="summary-box green-box" style="background: linear-gradient(135deg, #0284c7, #0369a1);">
                         <span class="summary-title">Total Nominal (IDR)</span>
                         <div id="summaryTotalHarga" class="summary-value">Rp0</div>
                     </div>
@@ -124,16 +139,14 @@
                         <input type="month" id="filterBulan">
                     </div>
                     <div class="filter-group">
-                        <label for="filterBbm">Filter BBM</label>
+                        <label for="filterBbm">Filter BBM / Kategori</label>
                         <select id="filterBbm">
-                            <option value="">Semua BBM</option>
-                            <option value="PERTAMAX TURBO">PERTAMAX TURBO</option>
-                            <option value="PERTAMAX">PERTAMAX</option>
+                            <option value="">Semua Kategori</option>
+                            <option value="PERTAMAX 20.000">PERTAMAX 20.000</option>
                             <option value="PERTAMAX 100.000 (SPBU PIRAMID)">PERTAMAX 100.000 (SPBU PIRAMID)</option>
-                            <option value="PERTALITE">PERTALITE</option>
-                            <option value="DEXLITE">DEXLITE</option>
-                            <option value="PERTAMINA DEX">PERTAMINA DEX</option>
-                            <option value="SOLAR">SOLAR</option>
+                            <option value="PERTAMAX 200.000">PERTAMAX 200.000</option>
+                            <option value="DEXLITE 200.000">DEXLITE 200.000</option>
+                            <option value="PERTAMINA DEX 200.000">PERTAMINA DEX 200.000</option>
                         </select>
                     </div>
                     <div class="filter-group">
@@ -163,6 +176,7 @@
                                 <th>Tanggal</th>
                                 <th>BBM</th>
                                 <th>Kendaraan</th>
+                                <th class="text-center">Jml Voucher</th>
                                 <th class="text-right">Total Harga</th>
                                 <th class="text-center">Foto Nota</th>
                             </tr>
