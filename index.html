@@ -4,188 +4,438 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kalkulator & Rekonsiliasi Nota BBM</title>
+    <title>Sistem Kelola & Rekonsiliasi Kupon BBM — KPPD Bantul</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-
     <script src="app.js" defer></script>
 </head>
 
 <body>
 
-    <!-- Modal Login / Password Guard -->
+    <!-- Modal Login Security Guard -->
     <div id="loginModal" class="login-modal-overlay">
         <div class="login-modal-card">
-            <h2>Masuk Aplikasi</h2>
-            <p>Masukkan password untuk mengakses sistem rekonsiliasi BBM.</p>
+            <div class="login-brand">
+                <span class="brand-badge">KPPD BANTUL</span>
+                <h2>Sistem Logistik BBM</h2>
+                <p>Masukkan password otorisasi untuk mengakses data persediaan kupon.</p>
+            </div>
             <form id="loginForm">
                 <div class="form-group">
-                    <label for="appPassword">Password</label>
-                    <input type="password" id="appPassword" placeholder="Masukkan password..." required>
+                    <label for="appPassword">Password Akses</label>
+                    <input type="password" id="appPassword" placeholder="••••••••" required>
                 </div>
-                <div id="loginError" class="login-error-msg" style="display: none;">Password salah!</div>
-                <button type="submit" class="btn-submit">Masuk</button>
+                <div id="loginError" class="login-error-msg" style="display: none;">⚠️ Password tidak valid! Silakan
+                    coba lagi.</div>
+                <button type="submit" class="btn-primary full-width">Masuk Portal</button>
             </form>
         </div>
     </div>
 
-    <!-- Modal Viewer Foto Nota -->
+    <!-- Modal Lightbox Viewer Nota -->
     <div id="photoViewerModal" class="image-modal-overlay" style="display: none;">
         <div class="image-modal-card">
-            <span class="close-modal-btn" onclick="tutupModalFoto()">&times;</span>
-            <h3 id="modalPhotoTitle">Foto Nota</h3>
+            <button class="close-modal-btn" onclick="tutupModalFoto()">&times;</button>
+            <div class="modal-header">
+                <h3 id="modalPhotoTitle">Detail Bukti Nota SPBU</h3>
+            </div>
             <div class="image-preview-container">
-                <img id="modalPhotoImage" src="" alt="Foto Nota BBM">
+                <img id="modalPhotoImage" src="" alt="Pratinjau Nota BBM">
             </div>
         </div>
     </div>
 
-    <!-- Container Utama -->
-    <div class="container" id="mainContainer" style="display: none;">
-        <header class="app-header">
-            <h1>Kalkulator & Rekonsiliasi Nota BBM</h1>
-            <p>Scan nota, input otomatis, dan deteksi duplikasi transaksi.</p>
+    <!-- Container Utama App -->
+    <div class="app-container" id="mainContainer" style="display: none;">
+
+        <!-- Header Banner KPPD Bantul -->
+        <header class="kppd-header">
+            <div class="header-brand">
+                <div class="logo-avatar">🏛️</div>
+                <div class="brand-text">
+                    <span class="sub-title">PEMERINTAH DAERAH DIY — KPPD KABUPATEN BANTUL</span>
+                    <h1>Sistem Persediaan & Rekonsiliasi Kupon BBM</h1>
+                </div>
+            </div>
+            <div class="header-status-badge">
+                <span class="status-dot"></span> Sistem Aktif
+            </div>
         </header>
 
+        <!-- Dashboard Stat Cards -->
+        <section class="dashboard-grid">
+            <div class="stat-card card-primary">
+                <div class="stat-icon">📦</div>
+                <div class="stat-info">
+                    <span class="stat-label">Stok Fisik Brankas</span>
+                    <div id="summaryStokBrankas" class="stat-value">0 Lembar</div>
+                    <span id="summaryStokBrankasRp" class="stat-sub">Rp0</span>
+                </div>
+            </div>
+
+            <div class="stat-card card-warning">
+                <div class="stat-icon">🚚</div>
+                <div class="stat-info">
+                    <span class="stat-label">Dibawa Pemohon (Intransit)</span>
+                    <div id="summaryStokIntransit" class="stat-value">0 Lembar</div>
+                    <span id="summaryStokIntransitRp" class="stat-sub">Rp0</span>
+                </div>
+            </div>
+
+            <div class="stat-card card-success">
+                <div class="stat-icon">🧾</div>
+                <div class="stat-info">
+                    <span class="stat-label">Pengeluaran Riil (Ada Nota)</span>
+                    <div id="summaryTotalTerpakai" class="stat-value">0 Lembar</div>
+                    <span id="summaryTotalTerpakaiRp" class="stat-sub">Rp0</span>
+                </div>
+            </div>
+        </section>
+
         <div class="main-layout">
-            <div class="card sidebar">
-                <h2>1. Upload & Scan Nota</h2>
 
-                <div class="form-group">
-                    <label>Pilih Foto Nota BBM</label>
-                    <div class="upload-options">
-                        <label for="fileNotaKamera" class="btn-upload-opt">
-                            📷 Ambil Foto (Kamera)
-                        </label>
-                        <input type="file" id="fileNotaKamera" accept="image/*" capture="environment"
-                            style="display: none;">
-
-                        <label for="fileNota" class="btn-upload-opt secondary">
-                            📁 Pilih dari Galeri
-                        </label>
-                        <input type="file" id="fileNota" accept="image/*" style="display: none;">
-                    </div>
-                    <div id="scanStatus" class="scan-status" style="display: none;">Memproses OCR...</div>
+            <!-- Sidebar Form Input Section -->
+            <aside class="sidebar-panel">
+                <div class="segmented-tabs">
+                    <button class="tab-btn active" id="btnTab1" onclick="switchTab('tabNota')">1. Nota SPBU</button>
+                    <button class="tab-btn" id="btnTab2" onclick="switchTab('tabPemohon')">2. Serah Kupon</button>
+                    <button class="tab-btn" id="btnTab3" onclick="switchTab('tabRetur')">3. Retur Sisa</button>
+                    <button class="tab-btn" id="btnTab4" onclick="switchTab('tabPembelian')">4. Pembelian</button>
                 </div>
 
-                <h2>2. Data Transaksi</h2>
-                <form id="formNota">
-                    <div class="form-group">
-                        <label for="noTransaksi">No. Transaksi / Nota</label>
-                        <input type="text" id="noTransaksi" required placeholder="Contoh: 12345">
+                <!-- FORM 1: NOTA SPBU -->
+                <div id="tabNota" class="panel-content active">
+                    <div class="panel-title">
+                        <h3>Input Nota BBM SPBU</h3>
+                        <p>Unggah foto nota untuk mengisi data otomatis via OCR.</p>
                     </div>
-                    <div class="form-group">
-                        <label for="tanggalNota">Tanggal</label>
-                        <input type="date" id="tanggalNota" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="platNomor">Nomor Kendaraan (Plat)</label>
-                        <select id="platNomor" required>
-                            <option value="">-- Pilih Kendaraan --</option>
-                            <option value="AVANZA 86 B">Avanza 86 B</option>
-                            <option value="JEMPOL 1132 BI">Jempol 1132 BI</option>
-                            <option value="PICK UP 8243 UA">Pick Up 8243 UA</option>
-                            <option value="SAMLING 7110 UA">Samling 7110 UA</option>
-                            <option value="L300 AB8073BI">L300 AB8073BI</option>
-                            <option value="AVANZA 1000 IS">Avanza 1000 IS</option>
-                            <option value="SUPRA 2112 IA">Supra 2112 IA</option>
-                            <option value="SUPRA 2112 UB">Supra 2112 UB</option>
-                            <option value="SUPRA 2859 IS">Supra 2859 IS</option>
-                            <option value="GODOOR 2422 IF">Godoor 2422 IF</option>
-                            <option value="GENZET">Genzet</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="jenisBbm">Jenis BBM / Voucher</label>
-                        <select id="jenisBbm" required>
-                            <option value="">-- Pilih Jenis BBM --</option>
-                            <option value="PERTAMAX 20.000">PERTAMAX 20.000 (Motor)</option>
-                            <option value="PERTAMAX 100.000 (SPBU PIRAMID)">PERTAMAX 100.000 (SPBU PIRAMID)</option>
-                            <option value="PERTAMAX 200.000">PERTAMAX 200.000</option>
-                            <option value="DEXLITE 200.000">DEXLITE 200.000</option>
-                            <option value="PERTAMINA DEX 200.000">PERTAMINA DEX 200.000</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="totalHarga">Total Harga (Rp)</label>
-                        <input type="number" id="totalHarga" required placeholder="Contoh: 150000">
-                    </div>
-                    <button type="submit" class="btn-submit">Simpan Nota</button>
-                </form>
-            </div>
 
-            <div class="card main-content">
-                <div class="summary-container">
-                    <div class="summary-box blue-box">
-                        <span class="summary-title">Total Nota Terinput</span>
-                        <div id="summaryTotalNota" class="summary-value">0</div>
+                    <div class="upload-zone">
+                        <label class="upload-label">Scan Nota Fisik</label>
+                        <div class="upload-btn-group">
+                            <label for="fileNotaKamera" class="btn-action secondary">📷 Ambil Foto</label>
+                            <input type="file" id="fileNotaKamera" accept="image/*" capture="environment"
+                                style="display: none;">
+
+                            <label for="fileNota" class="btn-action outline">📁 Galeri File</label>
+                            <input type="file" id="fileNota" accept="image/*" style="display: none;">
+                        </div>
+                        <div id="scanStatus" class="scan-status-alert" style="display: none;">
+                            <span class="spinner"></span> Memproses Pembacaan OCR...
+                        </div>
                     </div>
-                    <div class="summary-box green-box">
-                        <span class="summary-title">Total Voucher</span>
-                        <div id="summaryTotalKupon" class="summary-value">0 Lembar</div>
+
+                    <form id="formNota" class="app-form">
+                        <div class="form-group">
+                            <label for="idPinjamSelect">Tautkan Permintaan Pemohon</label>
+                            <select id="idPinjamSelect">
+                                <option value="">-- Tanpa Tautan (Bukan Kupon Intransit) --</option>
+                            </select>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group col-6">
+                                <label for="noTransaksi">No. Transaksi / Nota</label>
+                                <input type="text" id="noTransaksi" required placeholder="Contoh: 1128735">
+                            </div>
+                            <div class="form-group col-6">
+                                <label for="tanggalNota">Tanggal Nota</label>
+                                <input type="date" id="tanggalNota" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="platNomor">Nomor Kendaraan Dinas (Plat)</label>
+                            <select id="platNomor" required>
+                                <option value="">-- Pilih Kendaraan Ops KPPD --</option>
+                                <option value="AVANZA 86 B">Avanza AB 86 B (Ops)</option>
+                                <option value="JEMPOL 1132 BI">Jempol AB 1132 BI</option>
+                                <option value="PICK UP 8243 UA">Pick Up AB 8243 UA</option>
+                                <option value="SAMLING 7110 UA">Samling AB 7110 UA</option>
+                                <option value="L300 AB8073BI">L300 AB 8073 BI</option>
+                                <option value="AVANZA 1000 IS">Avanza AB 1000 IS</option>
+                                <option value="SUPRA 2112 IA">Supra AB 2112 IA</option>
+                                <option value="SUPRA 2112 UB">Supra AB 2112 UB</option>
+                                <option value="SUPRA 2859 IS">Supra AB 2859 IS</option>
+                                <option value="GODOOR 2422 IF">Godoor AB 2422 IF</option>
+                                <option value="GENZET">Genset Operasional</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="jenisBbm">Jenis Kupon / Voucher BBM</label>
+                            <select id="jenisBbm" required>
+                                <option value="">-- Pilih Jenis BBM --</option>
+                                <option value="PERTAMAX 20.000">PERTAMAX 20.000 (Motor)</option>
+                                <option value="PERTAMAX 100.000 (SPBU PIRAMID)">PERTAMAX 100.000 (SPBU Piramid)</option>
+                                <option value="PERTAMAX 200.000">PERTAMAX 200.000</option>
+                                <option value="DEXLITE 200.000">DEXLITE 200.000</option>
+                                <option value="PERTAMINA DEX 200.000">PERTAMINA DEX 200.000</option>
+                            </select>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group col-6">
+                                <label for="totalHarga">Total Harga Nota (Rp)</label>
+                                <input type="number" id="totalHarga" required placeholder="200000">
+                            </div>
+                            <div class="form-group col-6">
+                                <label for="namaPemohonNota">Pengambil / Driver</label>
+                                <input type="text" id="namaPemohonNota" placeholder="Nama Pegawai">
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-primary full-width">Simpan Nota & LPJ BBM</button>
+                    </form>
+                </div>
+
+                <!-- FORM 2: PENYERAHAN KUPON -->
+                <div id="tabPemohon" class="panel-content" style="display: none;">
+                    <div class="panel-title">
+                        <h3>Penyerahan Kupon ke Pegawai</h3>
+                        <p>Catat voucher yang diserahkan sebelum dibelikan di SPBU.</p>
                     </div>
-                    <div class="summary-box green-box" style="background: linear-gradient(135deg, #0284c7, #0369a1);">
-                        <span class="summary-title">Total Nominal (IDR)</span>
-                        <div id="summaryTotalHarga" class="summary-value">Rp0</div>
+
+                    <form id="formPemohonAmbil" class="app-form">
+                        <div class="form-group">
+                            <label for="tglAmbil">Tanggal Diserahkan</label>
+                            <input type="date" id="tglAmbil" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="namaPemohon">Nama Pemohon / Pengemudi</label>
+                            <input type="text" id="namaPemohon" placeholder="Contoh: Chandra / Joko / Ari" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="platPemohon">Peruntukan Kendaraan</label>
+                            <select id="platPemohon" required>
+                                <option value="">-- Pilih Kendaraan Ops --</option>
+                                <option value="AVANZA 86 B">Avanza AB 86 B</option>
+                                <option value="JEMPOL 1132 BI">Jempol AB 1132 BI</option>
+                                <option value="PICK UP 8243 UA">Pick Up AB 8243 UA</option>
+                                <option value="SAMLING 7110 UA">Samling AB 7110 UA</option>
+                                <option value="L300 AB8073BI">L300 AB 8073 BI</option>
+                                <option value="AVANZA 1000 IS">Avanza AB 1000 IS</option>
+                                <option value="SUPRA 2112 IA">Supra AB 2112 IA</option>
+                                <option value="SUPRA 2112 UB">Supra AB 2112 UB</option>
+                                <option value="SUPRA 2859 IS">Supra AB 2859 IS</option>
+                                <option value="GODOOR 2422 IF">Godoor AB 2422 IF</option>
+                                <option value="GENZET">Genset</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="bbmPemohon">Jenis Voucher Diserahkan</label>
+                            <select id="bbmPemohon" required>
+                                <option value="">-- Pilih Jenis Voucher --</option>
+                                <option value="PERTAMAX 20.000">PERTAMAX 20.000</option>
+                                <option value="PERTAMAX 100.000 (SPBU PIRAMID)">PERTAMAX 100.000 (Piramid)</option>
+                                <option value="PERTAMAX 200.000">PERTAMAX 200.000</option>
+                                <option value="DEXLITE 200.000">DEXLITE 200.000</option>
+                                <option value="PERTAMINA DEX 200.000">PERTAMINA DEX 200.000</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="jmlKuponAmbil">Jumlah Kupon (Lembar)</label>
+                            <input type="number" id="jmlKuponAmbil" min="1" placeholder="Contoh: 5" required>
+                        </div>
+                        <button type="submit" class="btn-warning full-width">Serahkan Kupon (Proses Intransit)</button>
+                    </form>
+                </div>
+
+                <!-- FORM 3: RETUR / BATAL PAKAI -->
+                <div id="tabRetur" class="panel-content" style="display: none;">
+                    <div class="panel-title">
+                        <h3>Pengembalian Sisa / Batal Kupon</h3>
+                        <p>Kembalikan kupon yang tidak jadi terpakai ke stok brankas.</p>
+                    </div>
+
+                    <form id="formReturKupon" class="app-form">
+                        <div class="form-group">
+                            <label for="returIdPinjamSelect">Pilih Permintaan Intransit</label>
+                            <select id="returIdPinjamSelect" required>
+                                <option value="">-- Pilih Data Intransit --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="jmlRetur">Jumlah Kupon Dikembalikan (Lembar)</label>
+                            <input type="number" id="jmlRetur" min="1" placeholder="Contoh: 2" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="alasanRetur">Alasan Pengembalian</label>
+                            <input type="text" id="alasanRetur"
+                                placeholder="Contoh: Tugas Luar Batal / Sisa Operasional" required>
+                        </div>
+                        <button type="submit" class="btn-success full-width">Kembalikan ke Brankas</button>
+                    </form>
+                </div>
+
+                <!-- FORM 4: PEMBELIAN KUPON BARU -->
+                <div id="tabPembelian" class="panel-content" style="display: none;">
+                    <div class="panel-title">
+                        <h3>Input Pembelian / Pasokan Kupon</h3>
+                        <p>Catat pengadaan voucher BBM baru ke dalam stok persediaan brankas.</p>
+                    </div>
+
+                    <form id="formPembelianKupon" class="app-form">
+                        <div class="form-group">
+                            <label for="pembelianBbm">Jenis Voucher BBM</label>
+                            <select id="pembelianBbm" required>
+                                <option value="">-- Pilih Jenis Voucher --</option>
+                                <option value="PERTAMAX 20.000">PERTAMAX 20.000</option>
+                                <option value="PERTAMAX 100.000 (SPBU PIRAMID)">PERTAMAX 100.000 (SPBU Piramid)</option>
+                                <option value="PERTAMAX 200.000">PERTAMAX 200.000</option>
+                                <option value="DEXLITE 200.000">DEXLITE 200.000</option>
+                                <option value="PERTAMINA DEX 200.000">PERTAMINA DEX 200.000</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="pembelianKupon">Jumlah Kupon (Lembar)</label>
+                            <input type="number" id="pembelianKupon" min="1" placeholder="Contoh: 50" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="pembelianBulan">Periode / Bulan Pembelian</label>
+                            <select id="pembelianBulan" required>
+                                <option value="">-- Pilih Bulan --</option>
+                                <option value="Januari">Januari</option>
+                                <option value="Februari">Februari</option>
+                                <option value="Maret">Maret</option>
+                                <option value="April">April</option>
+                                <option value="Mei">Mei</option>
+                                <option value="Juni">Juni</option>
+                                <option value="Juli">Juli</option>
+                                <option value="Agustus">Agustus</option>
+                                <option value="September">September</option>
+                                <option value="Oktober">Oktober</option>
+                                <option value="November">November</option>
+                                <option value="Desember">Desember</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn-primary full-width">Tambah Stok Pembelian</button>
+                    </form>
+                </div>
+            </aside>
+
+            <!-- Main Data Table Panel -->
+            <main class="content-panel">
+                <div class="view-switcher">
+                    <button class="switcher-btn active" id="viewBtnNota" onclick="switchViewTable('notaTable')">
+                        📋 Log Pengeluaran Nota
+                    </button>
+                    <button class="switcher-btn" id="viewBtnIntransit" onclick="switchViewTable('intransitTable')">
+                        ⏳ Kupon Intransit
+                    </button>
+                    <button class="switcher-btn" id="viewBtnPembelian" onclick="switchViewTable('pembelianTable')">
+                        📦 Riwayat Pembelian
+                    </button>
+                </div>
+
+                <!-- TABEL 1: NOTA SPBU TERPAKAI -->
+                <div id="notaTableSection">
+                    <div class="filter-bar">
+                        <div class="filter-item">
+                            <label>Filter Bulan</label>
+                            <input type="month" id="filterBulan">
+                        </div>
+                        <div class="filter-item">
+                            <label>Jenis BBM</label>
+                            <select id="filterBbm">
+                                <option value="">Semua Jenis BBM</option>
+                                <option value="PERTAMAX 20.000">PERTAMAX 20k</option>
+                                <option value="PERTAMAX 100.000">PERTAMAX 100k</option>
+                                <option value="PERTAMAX 200.000">PERTAMAX 200k</option>
+                                <option value="DEXLITE 200.000">DEXLITE / PERTAMINA DEX</option>
+                            </select>
+                        </div>
+                        <div class="filter-item flex-grow">
+                            <label>Cari Plat / Pemohon</label>
+                            <input type="text" id="filterKendaraan" placeholder="Ketik Plat / Nama Pegawai...">
+                        </div>
+                        <div class="filter-item">
+                            <label>Urutan</label>
+                            <select id="sortBy">
+                                <option value="tanggal-desc">Terbaru → Terlama</option>
+                                <option value="tanggal-asc">Terlama → Terbaru</option>
+                                <option value="harga-desc">Nominal Tertinggi</option>
+                                <option value="harga-asc">Nominal Terendah</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="modern-table">
+                            <thead>
+                                <tr>
+                                    <th>No. Transaksi</th>
+                                    <th>Tanggal</th>
+                                    <th>Jenis BBM</th>
+                                    <th>Kendaraan Ops</th>
+                                    <th>Pemohon</th>
+                                    <th class="text-center">Voucher</th>
+                                    <th class="text-right">Total Rp</th>
+                                    <th class="text-center">Lampiran</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelBody">
+                                <!-- Data Diisi Javascript -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
-                <div class="filter-sort-container">
-                    <div class="filter-group">
-                        <label for="filterBulan">Filter Bulan</label>
-                        <input type="month" id="filterBulan">
+                <!-- TABEL 2: KUPON INTRANSIT -->
+                <div id="intransitTableSection" style="display: none;">
+                    <div class="info-alert-banner">
+                        <span>💡</span>
+                        <div>
+                            <strong>Monitoring Kupon Intransit KPPD Bantul</strong>
+                            <p>Daftar penyerahan kupon yang masih dibawa pegawai dan belum diserahkan bukti nota SPBU
+                                atau belum dikembalikan.</p>
+                        </div>
                     </div>
-                    <div class="filter-group">
-                        <label for="filterBbm">Filter BBM / Kategori</label>
-                        <select id="filterBbm">
-                            <option value="">Semua Kategori</option>
-                            <option value="PERTAMAX 20.000">PERTAMAX 20.000</option>
-                            <option value="PERTAMAX 100.000 (SPBU PIRAMID)">PERTAMAX 100.000 (SPBU PIRAMID)</option>
-                            <option value="PERTAMAX 200.000">PERTAMAX 200.000</option>
-                            <option value="DEXLITE 200.000">DEXLITE 200.000</option>
-                            <option value="PERTAMINA DEX 200.000">PERTAMINA DEX 200.000</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label for="filterKendaraan">Filter Kendaraan</label>
-                        <input type="text" id="filterKendaraan" placeholder="Cari Plat...">
-                    </div>
-                    <div class="filter-group">
-                        <label for="sortBy">Urutkan</label>
-                        <select id="sortBy">
-                            <option value="tanggal-desc">Tanggal Baru -> Lama</option>
-                            <option value="tanggal-asc">Tanggal Lama -> Baru</option>
-                            <option value="bbm-asc">BBM (A-Z)</option>
-                            <option value="bbm-desc">BBM (Z-A)</option>
-                            <option value="plat-asc">Kendaraan (A-Z)</option>
-                            <option value="plat-desc">Kendaraan (Z-A)</option>
-                            <option value="harga-desc">Harga Termahal</option>
-                            <option value="harga-asc">Harga Termurah</option>
-                        </select>
+
+                    <div class="table-container">
+                        <table class="modern-table">
+                            <thead>
+                                <tr>
+                                    <th>ID Ref</th>
+                                    <th>Tgl Ambil</th>
+                                    <th>Pegawai Pemohon</th>
+                                    <th>Kendaraan</th>
+                                    <th>Voucher</th>
+                                    <th class="text-center">Jumlah</th>
+                                    <th class="text-center">Masa Pegang</th>
+                                    <th class="text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelIntransitBody">
+                                <!-- Data Diisi Javascript -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
-                <div class="table-responsive">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>No. Transaksi</th>
-                                <th>Tanggal</th>
-                                <th>BBM</th>
-                                <th>Kendaraan</th>
-                                <th class="text-center">Jml Voucher</th>
-                                <th class="text-right">Total Harga</th>
-                                <th class="text-center">Foto Nota</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tabelBody">
-                        </tbody>
-                    </table>
+                <!-- TABEL 3: RIWAYAT PEMBELIAN KUPON -->
+                <div id="pembelianTableSection" style="display: none;">
+                    <div class="table-container">
+                        <table class="modern-table">
+                            <thead>
+                                <tr>
+                                    <th>Bulan</th>
+                                    <th>Nama Barang / Voucher</th>
+                                    <th class="text-center">Jumlah Kupon</th>
+                                    <th class="text-right">Nominal Per Kupon</th>
+                                    <th class="text-right">Total Anggaran (Rp)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelPembelianBody">
+                                <!-- Data Diisi Javascript -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
+            </main>
         </div>
     </div>
 
