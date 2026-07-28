@@ -1,7 +1,7 @@
 /**
  * ==============================================================
  * APP.JS — Sistem Manajemen & Rekonsiliasi Kupon BBM KPPD Bantul
- * Fully Corrected & Dynamic Dashboard Syncing
+ * Fully Corrected & Mobile Screen Switcher Dynamic Integration
  * ==============================================================
  */
 
@@ -29,7 +29,7 @@ const KENDARAAN_RULES = [
     { plat: "GENZET", keywords: ["GENZET", "GENSET"], bbm: "DEXLITE 200.000" }
 ];
 
-const SPREADSHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycby3FTI41WdGp8PSSvpdUUPRbjkIXw_XYE_kw6V7Fft84BVyAkc4ppAn47b2P3XCDe5u/exec";
+const SPREADSHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwnSQGFHyN2uBdqfuOf7DJ_9YjqBdY9ueQqju8sEirmSyLi1EOacqe8OXalI8X7mnhwfQ/exec";
 
 // Local App States
 let databaseNota = [];
@@ -130,6 +130,28 @@ function switchViewTable(viewType) {
     }
 }
 
+/**
+ * PERGANTIAN HALAMAN UTAMA DI LAYAR HP
+ */
+function switchMainPage(pageType) {
+    const formSection = document.getElementById('formPageSection');
+    const tableSection = document.getElementById('tablePageSection');
+    const btnForm = document.getElementById('navBtnForm');
+    const btnTable = document.getElementById('navBtnTable');
+
+    if (pageType === 'formPage') {
+        if (formSection) formSection.style.display = 'block';
+        if (tableSection) tableSection.style.display = 'none';
+        if (btnForm) btnForm.classList.add('active');
+        if (btnTable) btnTable.classList.remove('active');
+    } else if (pageType === 'tablePage') {
+        if (formSection) formSection.style.display = 'none';
+        if (tableSection) tableSection.style.display = 'block';
+        if (btnForm) btnForm.classList.remove('active');
+        if (btnTable) btnTable.classList.add('active');
+    }
+}
+
 function populateDropdownIntransit() {
     const idPinjamSelect = document.getElementById('idPinjamSelect');
     const returIdPinjamSelect = document.getElementById('returIdPinjamSelect');
@@ -162,7 +184,6 @@ function populateDropdownIntransit() {
     });
 }
 
-// DYNAMIC DASHBOARD SUMMARY CALCULATIONS
 function hitungDanRenderSummary() {
     let totalSaldoAwalKupon = 0;
     let totalSaldoAwalRp = 0;
@@ -208,7 +229,6 @@ function hitungDanRenderSummary() {
         }
     });
 
-    // Formulasi Akuntansi Persediaan Brankas
     const sisaBrankasKupon = Math.max(0, (totalSaldoAwalKupon + totalPembelianKupon) - (totalTerpakaiKupon + totalIntransitKupon));
     const sisaBrankasRp = Math.max(0, (totalSaldoAwalRp + totalPembelianRp) - (totalTerpakaiRp + totalIntransitRp));
 
@@ -496,7 +516,7 @@ function tutupModalFoto() {
     if (modal) modal.style.display = 'none';
 }
 
-// Event Listeners Initialization
+// Initialization Listeners
 document.addEventListener('DOMContentLoaded', () => {
     const loginModal = document.getElementById('loginModal');
     const loginForm = document.getElementById('loginForm');
@@ -597,7 +617,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (fileNota) fileNota.addEventListener('change', handleFileChange);
     if (fileNotaKamera) fileNotaKamera.addEventListener('change', handleFileChange);
 
-    // Form Submit 1: Simpan Nota SPBU
+    // Form Submit 1: Nota
     const formNota = document.getElementById('formNota');
     if (formNota) {
         formNota.addEventListener('submit', (e) => {
@@ -722,7 +742,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Form Submit 4: Tambah Pembelian Kupon Baru
+    // Form Submit 4: Pembelian Baru
     const formPembelianKupon = document.getElementById('formPembelianKupon');
     if (formPembelianKupon) {
         formPembelianKupon.addEventListener('submit', (e) => {
@@ -775,7 +795,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Filter & Sorting Events
+    // Filter Events
     const fByMonth = document.getElementById('filterBulan');
     const fByBbm = document.getElementById('filterBbm');
     const fByPlat = document.getElementById('filterKendaraan');

@@ -1,6 +1,6 @@
 /**
  * ====================================================================
- * GOOGLE APPS SCRIPT — KPPD BANTUL BBM MANAGEMENT (UPDATED STRUCTURE)
+ * GOOGLE APPS SCRIPT — KPPD BANTUL BBM MANAGEMENT
  * - Saldo Awal: Sheet "SALDO" (A1:D6)
  * - Pembelian : Sheet "PEMBELIAN" (A3:C...)
  * - Intransit  : Sheet "Catatan Pengeluaran BBM"
@@ -26,10 +26,7 @@ function getNominalPerKupon(namaBbm) {
     if (str.indexOf("100.000") !== -1) return 100000;
     if (str.indexOf("200.000") !== -1) return 200000;
     if (str.indexOf("20.000") !== -1) return 20000;
-
-    // Penyetaraan Dexlite & Pertamina Dex = Rp200.000
     if (str.indexOf("DEX") !== -1 || str.indexOf("DEXLITE") !== -1) return 200000;
-
     return 20000;
 }
 
@@ -38,7 +35,7 @@ function doGet(e) {
     try {
         var ss = SpreadsheetApp.getActiveSpreadsheet();
 
-        // A. Ambil Data Log Nota SPBU (Terpakai)
+        // A. Data Nota BBM (Terpakai)
         var sheetNota = ss.getSheetByName(SHEET_NOTA) || ss.getSheets()[0];
         var dataNota = sheetNota.getDataRange().getValues();
         var richTextNota = sheetNota.getDataRange().getRichTextValues();
@@ -79,7 +76,7 @@ function doGet(e) {
             }
         }
 
-        // B. Ambil Data Sheet "Catatan Pengeluaran BBM" (Permohonan Intransit)
+        // B. Data Intransit
         var sheetPermohonan = ss.getSheetByName(SHEET_PERMOHONAN);
         var listIntransit = [];
 
@@ -107,7 +104,7 @@ function doGet(e) {
             }
         }
 
-        // C. Ambil Saldo Awal dari Sheet "SALDO" (Tabel Paling Atas: A3:D6)
+        // C. Data Saldo Awal
         var sheetSaldo = ss.getSheetByName(SHEET_SALDO);
         var listSaldoAwal = [];
 
@@ -125,7 +122,7 @@ function doGet(e) {
             }
         }
 
-        // D. Ambil Pasokan dari Sheet Khusus "PEMBELIAN" (Mulai Baris 3 sampai Bawah)
+        // D. Data Pembelian
         var sheetPembelian = ss.getSheetByName(SHEET_PEMBELIAN);
         var listPembelian = [];
 
@@ -168,12 +165,10 @@ function doPost(e) {
         var data = JSON.parse(e.postData.contents);
         var ss = SpreadsheetApp.getActiveSpreadsheet();
 
-        // Action A: OCR Scan
         if (data.action === "ocr") {
             return createJsonResponse(processOCR(data.foto));
         }
 
-        // Action B: Penyerahan Kupon ke Sheet "Catatan Pengeluaran BBM"
         if (data.action === "pemohon_ambil") {
             var sheetP = ss.getSheetByName(SHEET_PERMOHONAN);
             if (!sheetP) sheetP = ss.createSheet(SHEET_PERMOHONAN);
@@ -191,7 +186,6 @@ function doPost(e) {
             return createJsonResponse({ status: "success", message: "Kupon berhasil diserahkan ke pemohon." });
         }
 
-        // Action C: Retur / Centang Checkbox KEMBALI
         if (data.action === "kembalikan_kupon") {
             var sheetP = ss.getSheetByName(SHEET_PERMOHONAN);
             if (sheetP && data.idPinjam && data.idPinjam.indexOf("ROW-") !== -1) {
@@ -202,7 +196,6 @@ function doPost(e) {
             return createJsonResponse({ status: "success", message: "Status permohonan berhasil diperbarui." });
         }
 
-        // Action D: Tambah Pasokan Pembelian Baru ke Sheet "PEMBELIAN"
         if (data.action === "pembelian_baru") {
             var sheetBeli = ss.getSheetByName(SHEET_PEMBELIAN);
             if (!sheetBeli) sheetBeli = ss.createSheet(SHEET_PEMBELIAN);
@@ -215,7 +208,7 @@ function doPost(e) {
             return createJsonResponse({ status: "success", message: "Pasokan kupon berhasil dicatat ke sheet PEMBELIAN." });
         }
 
-        // Action E: Simpan Nota SPBU
+        // Action Simpan Nota SPBU
         var sheetN = ss.getSheetByName(SHEET_NOTA) || ss.getSheets()[0];
         var totalHarga = Number(data.total) || 0;
         var nominalKupon = getNominalPerKupon(data.bbm);
@@ -247,22 +240,18 @@ function doPost(e) {
             data.pemohon || ''
         ]);
 
-        // Di dalam doPost(e) bagian Action E (Simpan Nota SPBU):
         if (data.idPinjam && data.idPinjam.indexOf("ROW-") !== -1) {
             var sheetP = ss.getSheetByName(SHEET_PERMOHONAN);
             if (sheetP) {
                 var rIdx = parseInt(data.idPinjam.replace("ROW-", ""), 10);
-                var kuponAwal = Number(sheetP.getRange(rIdx, 4).getValue()) || 0; // Jml kupon diserahkan
-                var kuponDipakai = jumlahKupon; // Jml kupon dari nota baru
+                var kuponAwal = Number(sheetP.getRange(rIdx, 4).getValue()) || 0;
+                var kuponDipakai = jumlahKupon;
 
                 if (kuponAwal > kuponDipakai) {
-                    // A. JIKA BARU TERPAKE SEBAGIAN (Partial Settlement)
-                    // 1. Kurangi jumlah kupon di baris lama menjadi sisa kupon yang masih dibawa
                     var sisaKupon = kuponAwal - kuponDipakai;
                     sheetP.getRange(rIdx, 4).setValue(sisaKupon);
                     sheetP.getRange(rIdx, 8).setValue("Terpakai sebagian: " + kuponDipakai + " lbr (Nota " + data.no + ")");
 
-                    // 2. Buat baris baru khusus untuk yang SUDAH SELESAI (Dikembalikan/Ada Nota)
                     sheetP.appendRow([
                         new Date(),
                         data.tanggal,
@@ -270,12 +259,11 @@ function doPost(e) {
                         kuponDipakai,
                         data.plat,
                         data.pemohon,
-                        true, // KEMBALI = TRUE (Selesai)
+                        true,
                         "LPJ Parsial Nota " + data.no
                     ]);
                 } else {
-                    // B. JIKA SEMUA KUPON SUDAH TERPAKAI / PAS
-                    sheetP.getRange(rIdx, 7).setValue(true); // Checkbox KEMBALI = TRUE
+                    sheetP.getRange(rIdx, 7).setValue(true);
                     sheetP.getRange(rIdx, 8).setValue("Selesai LPJ Nota " + data.no);
                 }
             }
@@ -288,7 +276,6 @@ function doPost(e) {
     }
 }
 
-// Function Process OCR & Helpers
 function processOCR(base64Image) {
     try {
         var base64Data = base64Image.split(",")[1] || base64Image;

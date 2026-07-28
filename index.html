@@ -95,10 +95,20 @@
             </div>
         </section>
 
+        <!-- MAIN PAGE SWITCHER (MOBILE & DESKTOP TOGGLE) -->
+        <div class="main-page-nav">
+            <button class="page-nav-btn active" id="navBtnForm" onclick="switchMainPage('formPage')">
+                📝 Input & Transaksi
+            </button>
+            <button class="page-nav-btn" id="navBtnTable" onclick="switchMainPage('tablePage')">
+                📊 Data & Laporan
+            </button>
+        </div>
+
         <div class="main-layout">
 
-            <!-- Sidebar Form Input Section -->
-            <aside class="sidebar-panel">
+            <!-- PAGE 1: SIDEBAR FORM INPUT -->
+            <aside class="sidebar-panel" id="formPageSection">
                 <div class="segmented-tabs">
                     <button class="tab-btn active" id="btnTab1" onclick="switchTab('tabNota')">1. Nota SPBU</button>
                     <button class="tab-btn" id="btnTab2" onclick="switchTab('tabPemohon')">2. Serah Kupon</button>
@@ -317,8 +327,8 @@
                 </div>
             </aside>
 
-            <!-- Main Data Table Panel -->
-            <main class="content-panel">
+            <!-- PAGE 2: TABEL LAPORAN -->
+            <main class="content-panel" id="tablePageSection">
                 <div class="view-switcher">
                     <button class="switcher-btn active" id="viewBtnNota" onclick="switchViewTable('notaTable')">
                         📋 Log Pengeluaran Nota
