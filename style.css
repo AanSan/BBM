@@ -720,3 +720,122 @@ select:focus {
         display: block;
     }
 }
+
+/* ==============================================================
+   SARAN PENYESUAIAN RESPONSIVE: ORIENTATION & CROSS-DEVICE OPTIMIZATION
+   ============================================================== */
+
+/* 1. PENYESUAIAN KHUSUS SMARTPHONE MODE LANDSCAPE (Layar Tidur) */
+@media screen and (max-width: 992px) and (orientation: landscape) and (max-height: 500px) {
+
+    /* Ringkaskan Header agar tidak memakan ruang vertikal */
+    .kppd-header {
+        padding: 10px 16px;
+        margin-bottom: 10px;
+    }
+
+    .brand-text h1 {
+        font-size: 14px;
+    }
+
+    /* Ubah Dashboard Stat Cards menjadi Baris Ringkas (Horizontal Bar) */
+    .dashboard-grid {
+        display: flex;
+        flex-direction: row;
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+
+    .stat-card {
+        padding: 8px 12px;
+        flex: 1;
+        gap: 8px;
+    }
+
+    .stat-icon {
+        width: 32px;
+        height: 32px;
+        font-size: 16px;
+        border-radius: 8px;
+    }
+
+    .stat-value {
+        font-size: 14px;
+    }
+
+    .stat-label,
+    .stat-sub {
+        font-size: 10px;
+    }
+
+    /* Kembalikan Form Row menjadi 2 Kolom Samping-Sampingan karena Layar Lebar */
+    .form-row {
+        flex-direction: row !important;
+        gap: 10px;
+    }
+
+    /* Tampilkan kembali Layout Side-by-Side jika lebar layar mencukupi */
+    .main-layout {
+        grid-template-columns: 320px 1fr !important;
+        gap: 12px;
+    }
+
+    #formPageSection,
+    #tablePageSection {
+        display: block !important;
+        /* Paksa tampil berjejeran di Landscape HP */
+    }
+
+    .main-page-nav {
+        display: none !important;
+        /* Sembunyikan toggle navigasi HP saat landscape */
+    }
+}
+
+/* 2. OPTIMASI TAMPILAN DESKTOP / PC (Layar > 992px) */
+@media screen and (min-width: 993px) {
+
+    /* Pastikan Main Page Nav Sembunyi di Desktop */
+    .main-page-nav {
+        display: none !important;
+    }
+
+    /* Pastikan Form & Tabel Tampil Bersamaan */
+    #formPageSection,
+    #tablePageSection {
+        display: block !important;
+    }
+
+    .main-layout {
+        display: grid;
+        grid-template-columns: 360px 1fr;
+        gap: 20px;
+        align-items: start;
+    }
+
+    /* Sticky Sidebar agar Form Tetap Terlihat Saat Tabel di-Scroll */
+    .sidebar-panel {
+        position: sticky;
+        top: 20px;
+    }
+}
+
+/* 3. DOKUMEN TABLE SCROLLBAR STYLING (Aesthetic Scrollbar untuk PC & Mobile) */
+.table-container::-webkit-scrollbar {
+    height: 6px;
+    width: 6px;
+}
+
+.table-container::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
