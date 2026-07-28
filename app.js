@@ -1,7 +1,7 @@
 /**
  * ==============================================================
  * APP.JS — Sistem Manajemen & Rekonsiliasi Kupon BBM KPPD Bantul
- * Fully Corrected & Mobile Screen Switcher Dynamic Integration
+ * Fully Updated: Fast Initial Load & Mobile View Sync
  * ==============================================================
  */
 
@@ -29,7 +29,7 @@ const KENDARAAN_RULES = [
     { plat: "GENZET", keywords: ["GENZET", "GENSET"], bbm: "DEXLITE 200.000" }
 ];
 
-const SPREADSHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwnSQGFHyN2uBdqfuOf7DJ_9YjqBdY9ueQqju8sEirmSyLi1EOacqe8OXalI8X7mnhwfQ/exec";
+const SPREADSHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycby3FTI41WdGp8PSSvpdUUPRbjkIXw_XYE_kw6V7Fft84BVyAkc4ppAn47b2P3XCDe5u/exec";
 
 // Local App States
 let databaseNota = [];
@@ -58,9 +58,31 @@ function getNominalPerKupon(namaBbm) {
     return 20000;
 }
 
-// Fetch Syncing
+// 1. TAMPILKAN INDIKATOR LOADING SKELETON SAAT SPREADSHEET MEMUAT DATA
+function tampilkanSkeletonLoading() {
+    const tbody = document.getElementById('tabelBody');
+    const tbodyIntransit = document.getElementById('tabelIntransitBody');
+    const tbodyPembelian = document.getElementById('tabelPembelianBody');
+
+    const loadingRow = `
+        <tr>
+            <td colspan="8" class="text-center" style="padding: 24px; color: #64748b;">
+                <span style="display:inline-block; margin-right:8px;">⏳</span> 
+                <strong>Mengambil data persediaan terbaru dari cloud...</strong>
+            </td>
+        </tr>
+    `;
+
+    if (tbody) tbody.innerHTML = loadingRow;
+    if (tbodyIntransit) tbodyIntransit.innerHTML = loadingRow;
+    if (tbodyPembelian) tbodyPembelian.innerHTML = loadingRow;
+}
+
+// 2. FETCH & SYNCHRONIZE DARI SPREADSHEET
 function muatDataDariSpreadsheet() {
     if (!SPREADSHEET_WEBAPP_URL) return;
+
+    tampilkanSkeletonLoading(); // Tampilkan loading sebelum fetch selesai
 
     const fetchUrl = SPREADSHEET_WEBAPP_URL + "?nocache=" + new Date().getTime();
 
@@ -110,29 +132,27 @@ function switchViewTable(viewType) {
     const btnIntransit = document.getElementById('viewBtnIntransit');
     const btnPembelian = document.getElementById('viewBtnPembelian');
 
-    secNota.style.display = 'none';
-    secIntransit.style.display = 'none';
+    if (secNota) secNota.style.display = 'none';
+    if (secIntransit) secIntransit.style.display = 'none';
     if (secPembelian) secPembelian.style.display = 'none';
 
-    btnNota.classList.remove('active');
-    btnIntransit.classList.remove('active');
+    if (btnNota) btnNota.classList.remove('active');
+    if (btnIntransit) btnIntransit.classList.remove('active');
     if (btnPembelian) btnPembelian.classList.remove('active');
 
     if (viewType === 'notaTable') {
-        secNota.style.display = 'block';
-        btnNota.classList.add('active');
+        if (secNota) secNota.style.display = 'block';
+        if (btnNota) btnNota.classList.add('active');
     } else if (viewType === 'intransitTable') {
-        secIntransit.style.display = 'block';
-        btnIntransit.classList.add('active');
+        if (secIntransit) secIntransit.style.display = 'block';
+        if (btnIntransit) btnIntransit.classList.add('active');
     } else if (viewType === 'pembelianTable') {
         if (secPembelian) secPembelian.style.display = 'block';
         if (btnPembelian) btnPembelian.classList.add('active');
     }
 }
 
-/**
- * PERGANTIAN HALAMAN UTAMA DI LAYAR HP
- */
+// 3. SWITCHER HALAMAN UTAMA DI MOBILE HP (DISERTAI AUTO RE-RENDER)
 function switchMainPage(pageType) {
     const formSection = document.getElementById('formPageSection');
     const tableSection = document.getElementById('tablePageSection');
@@ -149,6 +169,11 @@ function switchMainPage(pageType) {
         if (tableSection) tableSection.style.display = 'block';
         if (btnForm) btnForm.classList.remove('active');
         if (btnTable) btnTable.classList.add('active');
+
+        // Refresh tabel secara otomatis saat menu "Data & Laporan" dibuka
+        renderTabel();
+        renderTabelIntransit();
+        renderTabelPembelian();
     }
 }
 
@@ -328,14 +353,18 @@ function renderTabel() {
         `;
     });
 
-    tbody.innerHTML += `
-        <tr style="background-color: #f1f5f9; font-weight: 800; border-top: 2px solid #cbd5e1;">
-            <td colspan="5" style="text-align: right; text-transform: uppercase;">Total Hasil Filter:</td>
-            <td class="text-center" style="color: #1e3a8a;">${totalKuponFilter} lbr</td>
-            <td class="text-right" style="color: #059669;">Rp${totalNominalFilter.toLocaleString('id-ID')}</td>
-            <td></td>
-        </tr>
-    `;
+    if (filteredData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="color:#64748b; padding:24px;">Tidak ada data log pengeluaran nota.</td></tr>`;
+    } else {
+        tbody.innerHTML += `
+            <tr style="background-color: #f1f5f9; font-weight: 800; border-top: 2px solid #cbd5e1;">
+                <td colspan="5" style="text-align: right; text-transform: uppercase;">Total Hasil Filter:</td>
+                <td class="text-center" style="color: #1e3a8a;">${totalKuponFilter} lbr</td>
+                <td class="text-right" style="color: #059669;">Rp${totalNominalFilter.toLocaleString('id-ID')}</td>
+                <td></td>
+            </tr>
+        `;
+    }
 }
 
 function renderTabelIntransit() {
@@ -516,7 +545,7 @@ function tutupModalFoto() {
     if (modal) modal.style.display = 'none';
 }
 
-// Initialization Listeners
+// 4. DOM LOADED INITIALIZATION & LISTENERS
 document.addEventListener('DOMContentLoaded', () => {
     const loginModal = document.getElementById('loginModal');
     const loginForm = document.getElementById('loginForm');
@@ -526,6 +555,19 @@ document.addEventListener('DOMContentLoaded', () => {
     function izinkanAkses() {
         if (loginModal) loginModal.style.display = 'none';
         if (mainContainer) mainContainer.style.display = 'block';
+
+        // Aktifkan view tabel default sejak awal
+        switchViewTable('notaTable');
+
+        // Set mode tampilan mobile default
+        if (window.innerWidth <= 992) {
+            switchMainPage('formPage');
+        }
+
+        // Tampilkan indikator memuat data
+        tampilkanSkeletonLoading();
+
+        // Sync data dari cloud
         muatDataDariSpreadsheet();
     }
 
@@ -617,7 +659,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (fileNota) fileNota.addEventListener('change', handleFileChange);
     if (fileNotaKamera) fileNotaKamera.addEventListener('change', handleFileChange);
 
-    // Form Submit 1: Nota
+    // Submit Form 1: Nota
     const formNota = document.getElementById('formNota');
     if (formNota) {
         formNota.addEventListener('submit', (e) => {
@@ -674,7 +716,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Form Submit 2: Serah Kupon
+    // Submit Form 2: Serah Kupon
     const formPemohonAmbil = document.getElementById('formPemohonAmbil');
     if (formPemohonAmbil) {
         formPemohonAmbil.addEventListener('submit', (e) => {
@@ -709,7 +751,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Form Submit 3: Retur Kupon
+    // Submit Form 3: Retur Kupon
     const formReturKupon = document.getElementById('formReturKupon');
     if (formReturKupon) {
         formReturKupon.addEventListener('submit', (e) => {
@@ -742,7 +784,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Form Submit 4: Pembelian Baru
+    // Submit Form 4: Pembelian Baru
     const formPembelianKupon = document.getElementById('formPembelianKupon');
     if (formPembelianKupon) {
         formPembelianKupon.addEventListener('submit', (e) => {
@@ -795,7 +837,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Filter Events
+    // Filter Events Realtime
     const fByMonth = document.getElementById('filterBulan');
     const fByBbm = document.getElementById('filterBbm');
     const fByPlat = document.getElementById('filterKendaraan');
