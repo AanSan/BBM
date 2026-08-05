@@ -68,9 +68,10 @@ body {
 
 /* App Container Layout */
 .app-container {
-    max-width: 1320px;
+    max-width: 1400px;
     margin: 0 auto;
     padding: 0 20px;
+    width: 100%;
 }
 
 /* ==============================================================
@@ -89,6 +90,7 @@ body {
     position: relative;
     overflow: hidden;
     border: 1px solid rgba(255, 255, 255, 0.1);
+    width: 100%;
 }
 
 .kppd-header::before {
@@ -143,6 +145,40 @@ body {
     color: #ffffff;
 }
 
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 1;
+}
+
+.btn-header-action {
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    padding: 6px 14px;
+    border-radius: 30px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    backdrop-filter: blur(8px);
+    transition: all 0.2s ease;
+}
+
+.btn-header-action:hover {
+    background: rgba(255, 255, 255, 0.22);
+    transform: translateY(-1px);
+}
+
+.btn-header-action.danger:hover {
+    background: rgba(244, 63, 94, 0.3);
+    border-color: rgba(244, 63, 94, 0.5);
+    color: #fecdd3;
+}
+
 .header-status-badge {
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -178,9 +214,10 @@ body {
    ============================================================== */
 .dashboard-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
     gap: 16px;
     margin-bottom: 20px;
+    width: 100%;
 }
 
 .stat-card {
@@ -258,9 +295,10 @@ body {
    ============================================================== */
 .main-layout {
     display: grid;
-    grid-template-columns: 360px 1fr;
+    grid-template-columns: 360px minmax(0, 1fr);
     gap: 20px;
     align-items: start;
+    width: 100%;
 }
 
 .sidebar-panel,
@@ -270,6 +308,7 @@ body {
     padding: 20px;
     border: 1px solid var(--border-color);
     box-shadow: var(--shadow-md);
+    min-width: 0;
 }
 
 .sidebar-panel {
@@ -451,21 +490,32 @@ select:focus {
 
 .custom-select-trigger {
     width: 100%;
-    min-height: 46px;
-    padding: 12px 14px;
+    min-height: 44px;
+    height: 44px;
+    padding: 0 12px;
     border: 1px solid var(--border-color);
     border-radius: 14px;
     font-family: inherit;
-    font-size: 15px;
+    font-size: 13px;
     font-weight: 600;
-    background: #f8fafc;
+    background: #ffffff;
     color: var(--text-dark);
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 6px;
     cursor: pointer;
     transition: all 0.2s ease;
     user-select: none;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+.custom-select-trigger > span:first-child {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    min-width: 0;
 }
 
 .custom-select-trigger:hover,
@@ -652,19 +702,27 @@ select:focus {
 .filter-bar {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 14px;
     background: #f8fafc;
     padding: 16px;
-    border-radius: 18px;
+    border-radius: 20px;
     margin-bottom: 18px;
     border: 1px solid var(--border-color);
 }
 
+.filter-header-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
 .filter-presets {
     display: flex;
-    gap: 6px;
+    gap: 8px;
     overflow-x: auto;
-    padding-bottom: 4px;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
 }
@@ -674,8 +732,9 @@ select:focus {
 }
 
 .preset-btn {
-    min-height: 36px;
-    padding: 6px 14px;
+    min-height: 34px;
+    height: 34px;
+    padding: 0 14px;
     border-radius: 20px;
     border: 1px solid var(--border-color);
     background: #ffffff;
@@ -685,6 +744,8 @@ select:focus {
     cursor: pointer;
     white-space: nowrap;
     transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
 }
 
 .preset-btn:hover {
@@ -700,42 +761,76 @@ select:focus {
     box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
 }
 
-.filter-row-inputs {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    align-items: flex-end;
-}
-
-.filter-item {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    flex: 1 1 130px;
-}
-
-.filter-item.flex-grow { flex-grow: 2; }
-.filter-item.flex-btn { flex: 0 0 auto; }
-
 .btn-reset-filter {
-    min-height: 46px;
-    padding: 10px 16px;
-    border-radius: 14px;
-    border: 1px solid #fca5a5;
-    background: #ffffff;
-    font-size: 13px;
+    min-height: 34px;
+    height: 34px;
+    padding: 0 14px;
+    border-radius: 20px;
+    border: 1px solid #fecdd3;
+    background: #fff1f2;
+    font-size: 12px;
     font-weight: 700;
     color: var(--danger-rose);
     cursor: pointer;
     transition: all 0.2s ease;
     white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
 }
 
 .btn-reset-filter:hover {
-    background: var(--danger-rose-light);
+    background: var(--danger-rose);
+    color: #ffffff;
     border-color: var(--danger-rose);
+    box-shadow: 0 3px 10px rgba(244, 63, 94, 0.25);
 }
-.filter-item label { font-size: 10px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; }
+
+.filter-row-inputs {
+    display: grid;
+    grid-template-columns: minmax(130px, 1.1fr) minmax(130px, 1.1fr) minmax(175px, 1.5fr) minmax(200px, 2fr) minmax(170px, 1.4fr);
+    gap: 12px;
+    align-items: end;
+    width: 100%;
+}
+
+@media (max-width: 1100px) {
+    .filter-row-inputs {
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    }
+}
+
+.filter-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
+
+.filter-item label {
+    font-size: 10.5px;
+    font-weight: 800;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.filter-bar input[type="date"],
+.filter-bar input[type="text"],
+.filter-bar select {
+    min-height: 44px;
+    height: 44px;
+    padding: 0 12px;
+    font-size: 13px;
+    font-weight: 600;
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid var(--border-color);
+}
 
 .table-container {
     overflow-x: auto;
@@ -1002,6 +1097,11 @@ select:focus {
 
     .filter-bar {
         flex-direction: column;
+    }
+
+    .filter-header-bar {
+        flex-wrap: wrap;
+        gap: 8px;
     }
 
     .filter-item {

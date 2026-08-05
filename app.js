@@ -793,6 +793,14 @@ function tutupModalFoto() {
     if (modal) modal.style.display = 'none';
 }
 
+function keluarSistem() {
+    sessionStorage.removeItem('isAuthenticated');
+    showToast("🔒 Sesi ditutup. Mengunci portal...", "info");
+    setTimeout(() => {
+        location.reload();
+    }, 500);
+}
+
 // 4. DOM LOADED INITIALIZATION & LISTENERS
 document.addEventListener('DOMContentLoaded', () => {
     populateVehicleAndBbmDropdowns();

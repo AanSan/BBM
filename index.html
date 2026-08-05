@@ -64,8 +64,16 @@
                     <h1>Sistem Logistik Kupon BBM</h1>
                 </div>
             </div>
-            <div class="header-status-badge">
-                <span class="status-dot"></span> <span class="status-text">Sistem Aktif</span>
+            <div class="header-actions">
+                <button type="button" class="btn-header-action" onclick="muatDataDariSpreadsheet()" title="Sinkronkan Data Cloud">
+                    <span>🔄</span> <span class="action-text">Sync Data</span>
+                </button>
+                <div class="header-status-badge">
+                    <span class="status-dot"></span> <span class="status-text">Sistem Aktif</span>
+                </div>
+                <button type="button" class="btn-header-action danger" onclick="keluarSistem()" title="Kunci / Keluar Portal">
+                    <span>🔒</span> <span class="action-text">Keluar</span>
+                </button>
             </div>
         </header>
 
@@ -309,34 +317,38 @@
                 <!-- TABEL 1: NOTA SPBU TERPAKAI -->
                 <div id="notaTableSection">
                     <div class="filter-bar">
-                        <!-- Quick Preset Date Buttons -->
-                        <div class="filter-presets">
-                            <button type="button" class="preset-btn active" id="btnPresetSemua" onclick="setQuickDateFilter('semua')">📅 Semua Data</button>
-                            <button type="button" class="preset-btn" id="btnPresetToday" onclick="setQuickDateFilter('today')">⚡ Hari Ini</button>
-                            <button type="button" class="preset-btn" id="btnPresetThisMonth" onclick="setQuickDateFilter('thisMonth')">🗓️ Bulan Ini</button>
-                            <button type="button" class="preset-btn" id="btnPresetLastMonth" onclick="setQuickDateFilter('lastMonth')">⏮️ Bulan Lalu</button>
+                        <!-- Header Filter: Presets + Reset Button -->
+                        <div class="filter-header-bar">
+                            <div class="filter-presets">
+                                <button type="button" class="preset-btn active" id="btnPresetSemua" onclick="setQuickDateFilter('semua')">📅 Semua Data</button>
+                                <button type="button" class="preset-btn" id="btnPresetToday" onclick="setQuickDateFilter('today')">⚡ Hari Ini</button>
+                                <button type="button" class="preset-btn" id="btnPresetThisMonth" onclick="setQuickDateFilter('thisMonth')">🗓️ Bulan Ini</button>
+                                <button type="button" class="preset-btn" id="btnPresetLastMonth" onclick="setQuickDateFilter('lastMonth')">⏮️ Bulan Lalu</button>
+                            </div>
+                            <button type="button" class="btn-reset-filter" onclick="resetAllFilters()">🧹 Reset Filter</button>
                         </div>
 
+                        <!-- Row Input Filters (Grid Presisi 5 Kolom) -->
                         <div class="filter-row-inputs">
-                            <div class="filter-item">
+                            <div class="filter-item item-date">
                                 <label>📅 Tanggal Mulai</label>
                                 <input type="date" id="filterTglMulai">
                             </div>
-                            <div class="filter-item">
+                            <div class="filter-item item-date">
                                 <label>📅 Tanggal Selesai</label>
                                 <input type="date" id="filterTglSelesai">
                             </div>
-                            <div class="filter-item">
+                            <div class="filter-item item-select">
                                 <label>⛽ Jenis BBM</label>
                                 <select id="filterBbm">
                                     <option value="">🔍 Semua Jenis BBM</option>
                                 </select>
                             </div>
-                            <div class="filter-item flex-grow">
+                            <div class="filter-item item-search">
                                 <label>🔍 Cari Plat / Pemohon</label>
                                 <input type="text" id="filterKendaraan" placeholder="Ketik Plat / Nama Pegawai...">
                             </div>
-                            <div class="filter-item">
+                            <div class="filter-item item-sort">
                                 <label>📊 Urutan</label>
                                 <select id="sortBy">
                                     <option value="tanggal-desc">⬇️ Terbaru → Terlama</option>
@@ -344,9 +356,6 @@
                                     <option value="harga-desc">💰 Nominal Tertinggi</option>
                                     <option value="harga-asc">🏷️ Nominal Terendah</option>
                                 </select>
-                            </div>
-                            <div class="filter-item flex-btn">
-                                <button type="button" class="btn-reset-filter" onclick="resetAllFilters()">🧹 Reset</button>
                             </div>
                         </div>
                     </div>
