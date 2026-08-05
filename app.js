@@ -246,11 +246,39 @@ function tampilkanSkeletonLoading() {
     if (tbodyPembelian) tbodyPembelian.innerHTML = loadingRow;
 }
 
+function muatCacheLokal() {
+    try {
+        const cacheStr = localStorage.getItem('kppd_bbm_cache_v2');
+        if (cacheStr) {
+            const data = JSON.parse(cacheStr);
+            if (data && data.nota) {
+                databaseNota = data.nota || [];
+                databaseIntransit = data.intransit || [];
+                databaseSaldoAwal = data.saldoAwal || [];
+                databasePembelian = data.pembelian || [];
+
+                populateDropdownIntransit();
+                renderTabel();
+                renderTabelIntransit();
+                renderTabelPembelian();
+                hitungDanRenderSummary();
+            }
+        }
+    } catch (e) {
+        console.warn("Gagal membaca cache lokal:", e);
+    }
+}
+
 // 2. FETCH & SYNCHRONIZE DARI SPREADSHEET
 function muatDataDariSpreadsheet() {
     if (!SPREADSHEET_WEBAPP_URL) return;
 
-    // Tampilkan loading skeleton HANYA jika data lokal belum pernah dimuat (awal buka app)
+    // Muat cache lokal terlebih dahulu agar UI terbuka 0ms instan
+    if (!databaseNota || databaseNota.length === 0) {
+        muatCacheLokal();
+    }
+
+    // Tampilkan loading skeleton HANYA jika data lokal belum pernah dimuat (awal buka app pertama kali)
     if (!databaseNota || databaseNota.length === 0) {
         tampilkanSkeletonLoading();
     }
@@ -274,6 +302,16 @@ function muatDataDariSpreadsheet() {
                 databaseIntransit = data.intransit || [];
                 databaseSaldoAwal = data.saldoAwal || [];
                 databasePembelian = data.pembelian || [];
+
+                // Simpan ke localStorage cache
+                try {
+                    localStorage.setItem('kppd_bbm_cache_v2', JSON.stringify({
+                        nota: databaseNota,
+                        intransit: databaseIntransit,
+                        saldoAwal: databaseSaldoAwal,
+                        pembelian: databasePembelian
+                    }));
+                } catch (e) { }
             }
             populateDropdownIntransit();
             renderTabel();
@@ -283,7 +321,11 @@ function muatDataDariSpreadsheet() {
         })
         .catch(err => {
             console.error("Gagal sinkronisasi data:", err);
-            showToast("⚠️ Gagal sinkronisasi cloud: " + err.message, "error");
+            if (databaseNota && databaseNota.length > 0) {
+                showToast("⚡ Menggunakan data cache (Cloud offline/lambat)", "warning");
+            } else {
+                showToast("⚠️ Gagal sinkronisasi cloud: " + err.message, "error");
+            }
             renderTabel();
             renderTabelIntransit();
             renderTabelPembelian();
