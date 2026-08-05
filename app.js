@@ -59,6 +59,21 @@ function escapeHTML(str) {
         .replace(/'/g, "&#039;");
 }
 
+function formatTanggalIndo(str) {
+    if (!str) return '-';
+    var cleanStr = String(str).trim().split('T')[0];
+    var parts = cleanStr.split(/[-/]/);
+    if (parts.length === 3) {
+        if (parts[0].length === 4) {
+            return parts[2].padStart(2, '0') + '/' + parts[1].padStart(2, '0') + '/' + parts[0];
+        }
+        if (parts[2].length === 4) {
+            return parts[0].padStart(2, '0') + '/' + parts[1].padStart(2, '0') + '/' + parts[2];
+        }
+    }
+    return cleanStr;
+}
+
 function showToast(message, type = 'info') {
     const container = document.getElementById('toastContainer');
     if (!container) return;
@@ -587,7 +602,7 @@ function renderTabel() {
         tbody.innerHTML += `
             <tr>
                 <td style="font-family:monospace; font-weight:700;">${escapeHTML(item.no || '-')}</td>
-                <td>${escapeHTML(item.tanggal || '-')}</td>
+                <td>${escapeHTML(formatTanggalIndo(item.tanggal))}</td>
                 <td><span class="badge ${badgeClass}">${escapeHTML(item.bbm || '-')}</span></td>
                 <td><strong>${escapeHTML(item.plat || '-')}</strong></td>
                 <td>${escapeHTML(item.pemohon || '-')}</td>
@@ -633,7 +648,7 @@ function renderTabelIntransit() {
             tbody.innerHTML += `
                 <tr>
                     <td style="font-family:monospace; font-weight:700;">${escapeHTML(item.id || 'REQ')}</td>
-                    <td>${escapeHTML(item.tanggal || '-')}</td>
+                    <td>${escapeHTML(formatTanggalIndo(item.tanggal))}</td>
                     <td style="font-weight:700; color:#1e3a8a;">${escapeHTML(item.pemohon || '-')}</td>
                     <td>${escapeHTML(item.plat || '-')}</td>
                     <td>${escapeHTML(item.bbm || '-')}</td>
@@ -764,10 +779,22 @@ function parseNotaText(rawText) {
     }
     if (maxTotal > 1000) hasil.total = maxTotal;
 
-    const polaTanggal = rawUpper.match(/(\d{2})[-/](\d{2})[-/](\d{2,4})/);
+    const polaTanggal = rawUpper.match(/(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})/);
     if (polaTanggal) {
         let thn = polaTanggal[3].length === 2 ? "20" + polaTanggal[3] : polaTanggal[3];
-        hasil.tanggal = `${thn}-${polaTanggal[2].padStart(2, '0')}-${polaTanggal[1].padStart(2, '0')}`;
+        let p1 = parseInt(polaTanggal[1], 10);
+        let p2 = parseInt(polaTanggal[2], 10);
+        let tgl = String(p1).padStart(2, '0');
+        let bln = String(p2).padStart(2, '0');
+
+        // Di Indonesia, format nota SPBU adalah Tanggal/Bulan/Tahun (DD/MM/YYYY)
+        if (p1 <= 12 && p2 > 12) {
+            // Jika formatnya MM/DD/YYYY
+            bln = String(p1).padStart(2, '0');
+            tgl = String(p2).padStart(2, '0');
+        }
+
+        hasil.tanggal = `${thn}-${bln}-${tgl}`;
     }
 
     return hasil;
@@ -850,7 +877,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const val = e.target.value;
             const matchRule = KENDARAAN_RULES.find(r => r.plat === val);
             if (matchRule) {
-                document.getElementById('jenisBbm').value = matchRule.bbm;
+                const elBbm = document.getElementById('jenisBbm');
+                if (elBbm) {
+                    elBbm.value = matchRule.bbm;
+                    elBbm.dispatchEvent(new Event('change', { bubbles: true }));
+                }
             }
         });
     }
@@ -861,9 +892,39 @@ document.addEventListener('DOMContentLoaded', () => {
             const val = e.target.value;
             const selectedIntransit = databaseIntransit.find(i => i.id === val);
             if (selectedIntransit) {
-                document.getElementById('platNomor').value = selectedIntransit.plat || '';
-                document.getElementById('jenisBbm').value = selectedIntransit.bbm || '';
-                document.getElementById('namaPemohonNota').value = selectedIntransit.pemohon || '';
+                const elPlat = document.getElementById('platNomor');
+                const elBbm = document.getElementById('jenisBbm');
+
+                // Cari Plat yang cocok dari KENDARAAN_RULES
+                let targetPlat = selectedIntransit.plat || '';
+                const matchVehicle = KENDARAAN_RULES.find(r =>
+                    r.plat === targetPlat ||
+                    (targetPlat && r.keywords.some(kw => targetPlat.toUpperCase().includes(kw.toUpperCase())))
+                );
+                if (matchVehicle) {
+                    targetPlat = matchVehicle.plat;
+                }
+
+                // Cari Jenis BBM yang cocok dari BBM_TYPES atau matchVehicle
+                let targetBbm = selectedIntransit.bbm || '';
+                if (matchVehicle && !targetBbm) {
+                    targetBbm = matchVehicle.bbm;
+                } else if (targetBbm) {
+                    const matchBbm = BBM_TYPES.find(b => b.name.toUpperCase().includes(targetBbm.toUpperCase()) || targetBbm.toUpperCase().includes(b.name.toUpperCase()));
+                    if (matchBbm) targetBbm = matchBbm.name;
+                }
+
+                if (elPlat && targetPlat) {
+                    elPlat.value = targetPlat;
+                    elPlat.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (elBbm && targetBbm) {
+                    elBbm.value = targetBbm;
+                    elBbm.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (selectedIntransit.pemohon) {
+                    document.getElementById('namaPemohonNota').value = selectedIntransit.pemohon;
+                }
             }
         });
     }
@@ -888,7 +949,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({ action: "ocr", foto: fullBase64 })
             });
 
-            const data = await response.json();
+            const responseText = await response.text();
+            let data;
+            try {
+                data = JSON.parse(responseText);
+            } catch (jsonErr) {
+                throw new Error("Server Google Apps Script merespons HTML 404. Silakan lakukan Deployment Ulang (Versi Baru) di editor Apps Script.");
+            }
+
             if (data.status === "error") throw new Error(data.message);
 
             if (data.text) {
@@ -900,11 +968,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (hasil.plat) {
                     const elPlat = document.getElementById('platNomor');
-                    elPlat.value = hasil.plat;
-                    elPlat.dispatchEvent(new Event('change'));
+                    if (elPlat) {
+                        elPlat.value = hasil.plat;
+                        elPlat.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
                 }
 
-                if (hasil.bbm) document.getElementById('jenisBbm').value = hasil.bbm;
+                if (hasil.bbm) {
+                    const elBbm = document.getElementById('jenisBbm');
+                    if (elBbm) {
+                        elBbm.value = hasil.bbm;
+                        elBbm.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                }
 
                 if (scanStatus) scanStatus.innerText = "✓ Selesai OCR! Silakan cek kembali data yang terisi.";
             }

@@ -135,26 +135,26 @@
                         <p>Unggah foto nota untuk mengisi data otomatis via OCR AI.</p>
                     </div>
 
-                    <div class="upload-zone">
-                        <label class="upload-label">📸 Scan Nota Fisik SPBU</label>
-                        <div class="upload-btn-group">
-                            <label for="fileNotaKamera" class="btn-action secondary">📷 Ambil Foto</label>
-                            <input type="file" id="fileNotaKamera" accept="image/*" capture="environment" style="display: none;">
-
-                            <label for="fileNota" class="btn-action outline">📁 Pilih Galeri</label>
-                            <input type="file" id="fileNota" accept="image/*" style="display: none;">
-                        </div>
-                        <div id="scanStatus" class="scan-status-alert" style="display: none;">
-                            <span>⏳</span> Memproses Pembacaan OCR...
-                        </div>
-                    </div>
-
                     <form id="formNota" class="app-form">
-                        <div class="form-group">
+                        <div class="form-group" style="margin-bottom: 4px;">
                             <label for="idPinjamSelect">🔗 Tautkan Permintaan Pemohon</label>
                             <select id="idPinjamSelect">
                                 <option value="">-- Tanpa Tautan (Bukan Kupon Intransit) --</option>
                             </select>
+                        </div>
+
+                        <div class="upload-zone">
+                            <label class="upload-label">📸 Scan Nota Fisik SPBU</label>
+                            <div class="upload-btn-group">
+                                <label for="fileNotaKamera" class="btn-action secondary">📷 Ambil Foto</label>
+                                <input type="file" id="fileNotaKamera" accept="image/*" capture="environment" style="display: none;">
+
+                                <label for="fileNota" class="btn-action outline">📁 Pilih Galeri</label>
+                                <input type="file" id="fileNota" accept="image/*" style="display: none;">
+                            </div>
+                            <div id="scanStatus" class="scan-status-alert" style="display: none;">
+                                <span>⏳</span> Memproses Pembacaan OCR...
+                            </div>
                         </div>
 
                         <div class="form-row">
