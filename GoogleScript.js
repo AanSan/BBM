@@ -13,7 +13,7 @@ const SHEET_PERMOHONAN = "Catatan Pengeluaran BBM";
 const SHEET_SALDO = "SALDO";
 const SHEET_PEMBELIAN = "PEMBELIAN";
 const FOLDER_NAME = "Foto Nota BBM";
-const WHISPER_API_KEY = "uf3mDFBoCCQNyVhE0XrJPQ_exEH5zlPTXIVGSMCGNjM";
+const WHISPER_API_KEY = PropertiesService.getScriptProperties().getProperty("WHISPER_API_KEY") || "uf3mDFBoCCQNyVhE0XrJPQ_exEH5zlPTXIVGSMCGNjM";
 const WHISPER_BASE_URL = "https://llmwhisperer-api.us-central.unstract.com/api/v2";
 
 function createJsonResponse(data) {
@@ -190,10 +190,19 @@ function doPost(e) {
             var sheetP = ss.getSheetByName(SHEET_PERMOHONAN);
             if (sheetP && data.idPinjam && data.idPinjam.indexOf("ROW-") !== -1) {
                 var rowIndex = parseInt(data.idPinjam.replace("ROW-", ""), 10);
-                sheetP.getRange(rowIndex, 7).setValue(true);
-                sheetP.getRange(rowIndex, 8).setValue("Dikembalikan / Retur: " + (data.alasan || ""));
+                var kuponPinjamAwal = Number(sheetP.getRange(rowIndex, 4).getValue()) || 0;
+                var jumlahRetur = Number(data.jumlahKembali) || 0;
+
+                if (kuponPinjamAwal > jumlahRetur && jumlahRetur > 0) {
+                    var sisaIntransit = kuponPinjamAwal - jumlahRetur;
+                    sheetP.getRange(rowIndex, 4).setValue(sisaIntransit);
+                    sheetP.getRange(rowIndex, 8).setValue("Dikembalikan Sebagian (" + jumlahRetur + " lbr): " + (data.alasan || ""));
+                } else {
+                    sheetP.getRange(rowIndex, 7).setValue(true);
+                    sheetP.getRange(rowIndex, 8).setValue("Dikembalikan Seluruhnya: " + (data.alasan || ""));
+                }
             }
-            return createJsonResponse({ status: "success", message: "Status permohonan berhasil diperbarui." });
+            return createJsonResponse({ status: "success", message: "Status permohonan retur berhasil diperbarui." });
         }
 
         if (data.action === "pembelian_baru") {

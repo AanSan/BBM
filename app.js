@@ -29,7 +29,7 @@ const KENDARAAN_RULES = [
     { plat: "GENZET", keywords: ["GENZET", "GENSET"], bbm: "DEXLITE 200.000" }
 ];
 
-const SPREADSHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycby3FTI41WdGp8PSSvpdUUPRbjkIXw_XYE_kw6V7Fft84BVyAkc4ppAn47b2P3XCDe5u/exec";
+const SPREADSHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbw-LRu8SQhhwPRrraKXyAXILVBILxfB54H_uCuvd38SZRUCC6F6SxjsElbbOc4sFVZFCA/exec";
 
 // Local App States
 let databaseNota = [];
@@ -45,6 +45,68 @@ const BADGE_CLASS_MAP = {
     'DEXLITE 200.000': 'badge-dexlite',
     'PERTAMINA DEX 200.000': 'badge-dex'
 };
+
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast-item toast-${type}`;
+
+    let icon = 'ℹ️';
+    if (type === 'success') icon = '✅';
+    if (type === 'error') icon = '⚠️';
+    if (type === 'warning') icon = '🔔';
+
+    toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.classList.add('hide');
+        setTimeout(() => toast.remove(), 300);
+    }, 3500);
+}
+
+function populateVehicleAndBbmDropdowns() {
+    const platSelects = [document.getElementById('platNomor'), document.getElementById('platPemohon')];
+    const bbmSelects = [
+        document.getElementById('jenisBbm'),
+        document.getElementById('bbmPemohon'),
+        document.getElementById('pembelianBbm'),
+        document.getElementById('filterBbm')
+    ];
+
+    platSelects.forEach(select => {
+        if (!select) return;
+        const currentVal = select.value;
+        const firstOptText = select.id === 'platNomor' ? '-- Pilih Kendaraan Ops KPPD --' : '-- Pilih Kendaraan Ops --';
+        select.innerHTML = `<option value="">${firstOptText}</option>`;
+        KENDARAAN_RULES.forEach(item => {
+            const opt = document.createElement('option');
+            opt.value = item.plat;
+            opt.textContent = item.plat;
+            select.appendChild(opt);
+        });
+        if (currentVal) select.value = currentVal;
+    });
+
+    bbmSelects.forEach(select => {
+        if (!select) return;
+        const currentVal = select.value;
+        if (select.id === 'filterBbm') {
+            select.innerHTML = '<option value="">Semua Jenis BBM</option>';
+        } else {
+            select.innerHTML = '<option value="">-- Pilih Jenis BBM --</option>';
+        }
+        BBM_TYPES.forEach(item => {
+            const opt = document.createElement('option');
+            opt.value = item.name;
+            opt.textContent = item.name;
+            select.appendChild(opt);
+        });
+        if (currentVal) select.value = currentVal;
+    });
+}
 
 function getNominalPerKupon(namaBbm) {
     if (!namaBbm) return 20000;
@@ -87,7 +149,16 @@ function muatDataDariSpreadsheet() {
     const fetchUrl = SPREADSHEET_WEBAPP_URL + "?nocache=" + new Date().getTime();
 
     fetch(fetchUrl)
-        .then(res => res.json())
+        .then(async res => {
+            if (!res.ok) {
+                throw new Error(`Server HTTP Error ${res.status}: URL Web App Google Apps Script tidak valid / 404.`);
+            }
+            const contentType = res.headers.get("content-type");
+            if (contentType && !contentType.includes("application/json")) {
+                throw new Error("Respon server berupa HTML (bukan JSON). Pastikan deployment Apps Script diset 'Who has access: Anyone'.");
+            }
+            return res.json();
+        })
         .then(data => {
             if (data && data.nota) {
                 databaseNota = data.nota || [];
@@ -103,6 +174,7 @@ function muatDataDariSpreadsheet() {
         })
         .catch(err => {
             console.error("Gagal sinkronisasi data:", err);
+            showToast("⚠️ Gagal sinkronisasi cloud: " + err.message, "error");
             renderTabel();
             renderTabelIntransit();
             renderTabelPembelian();
@@ -531,7 +603,7 @@ function parseNotaText(rawText) {
 function bukaModalFoto(index) {
     const item = databaseNota[index];
     if (!item || (!item.foto && !item.fotoUrl)) {
-        alert("Foto nota tidak tersedia.");
+        showToast("Foto nota tidak tersedia.", "warning");
         return;
     }
     const modal = document.getElementById('photoViewerModal');
@@ -547,6 +619,8 @@ function tutupModalFoto() {
 
 // 4. DOM LOADED INITIALIZATION & LISTENERS
 document.addEventListener('DOMContentLoaded', () => {
+    populateVehicleAndBbmDropdowns();
+
     const loginModal = document.getElementById('loginModal');
     const loginForm = document.getElementById('loginForm');
     const appPasswordInput = document.getElementById('appPassword');
@@ -674,7 +748,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const idPinjam = document.getElementById('idPinjamSelect').value;
 
             if (databaseNota.some(item => item.no === no)) {
-                alert(`⚠️ No Transaksi ${no} sudah tercatat di sistem!`);
+                showToast(`⚠️ No Transaksi ${no} sudah tercatat di sistem!`, 'warning');
                 return;
             }
 
@@ -698,10 +772,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     .then(() => {
                         formNota.reset();
                         tempCurrentBase64 = "";
-                        alert(`✅ Nota BBM (${jumlahKupon} voucher) berhasil diselesaikan!`);
+                        showToast(`✅ Nota BBM (${jumlahKupon} voucher) berhasil diselesaikan!`, 'success');
                         muatDataDariSpreadsheet();
                     })
-                    .catch(err => alert("Gagal menyimpan: " + err.message))
+                    .catch(err => showToast("Gagal menyimpan: " + err.message, 'error'))
                     .finally(() => {
                         submitBtn.disabled = false;
                         submitBtn.innerText = "Simpan Nota & LPJ BBM";
@@ -711,7 +785,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderTabelIntransit();
                 hitungDanRenderSummary();
                 formNota.reset();
-                alert(`✅ Nota berhasil disimpan di sistem lokal (${jumlahKupon} voucher)!`);
+                showToast(`✅ Nota berhasil disimpan di sistem lokal (${jumlahKupon} voucher)!`, 'success');
             }
         });
     }
@@ -719,8 +793,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // Submit Form 2: Serah Kupon
     const formPemohonAmbil = document.getElementById('formPemohonAmbil');
     if (formPemohonAmbil) {
-        formPemohonAmbil.addEventListener('submit', (e) => {
+        formPemohonAmbil.addEventListener('submit', async (e) => {
             e.preventDefault();
+
+            const submitBtn = formPemohonAmbil.querySelector('button[type="submit"]');
+            const originalText = submitBtn ? submitBtn.innerText : "Serahkan Kupon (Proses Intransit)";
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = "Menyimpan ke Cloud...";
+            }
 
             const payload = {
                 action: "pemohon_ambil",
@@ -733,29 +814,47 @@ document.addEventListener('DOMContentLoaded', () => {
                 status: "PENDING"
             };
 
-            databaseIntransit.unshift(payload);
+            try {
+                if (SPREADSHEET_WEBAPP_URL) {
+                    const res = await fetch(SPREADSHEET_WEBAPP_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify(payload)
+                    });
+                    const resData = await res.json();
+                    if (resData.status === "error") throw new Error(resData.message);
+                }
 
-            if (SPREADSHEET_WEBAPP_URL) {
-                fetch(SPREADSHEET_WEBAPP_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify(payload)
-                }).then(() => muatDataDariSpreadsheet());
+                databaseIntransit.unshift(payload);
+                formPemohonAmbil.reset();
+                populateDropdownIntransit();
+                renderTabelIntransit();
+                hitungDanRenderSummary();
+                showToast(`✅ Kupon (${payload.kupon} lembar) diserahkan ke ${payload.pemohon}. Status: Intransit.`, 'success');
+            } catch (err) {
+                console.error("Gagal menyerahkan kupon:", err);
+                showToast("⚠️ Gagal menyimpan ke cloud: " + err.message, 'error');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = originalText;
+                }
             }
-
-            alert(`✅ Kupon (${payload.kupon} lembar) diserahkan ke ${payload.pemohon}. Status: Intransit.`);
-            formPemohonAmbil.reset();
-            populateDropdownIntransit();
-            renderTabelIntransit();
-            hitungDanRenderSummary();
         });
     }
 
     // Submit Form 3: Retur Kupon
     const formReturKupon = document.getElementById('formReturKupon');
     if (formReturKupon) {
-        formReturKupon.addEventListener('submit', (e) => {
+        formReturKupon.addEventListener('submit', async (e) => {
             e.preventDefault();
+
+            const submitBtn = formReturKupon.querySelector('button[type="submit"]');
+            const originalText = submitBtn ? submitBtn.innerText : "Kembalikan ke Brankas";
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = "Memproses Retur...";
+            }
 
             const idPinjam = document.getElementById('returIdPinjamSelect').value;
             const jmlKembali = parseInt(document.getElementById('jmlRetur').value, 10);
@@ -768,31 +867,61 @@ document.addEventListener('DOMContentLoaded', () => {
                 alasan
             };
 
-            if (SPREADSHEET_WEBAPP_URL) {
-                fetch(SPREADSHEET_WEBAPP_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify(payload)
-                }).then(() => muatDataDariSpreadsheet());
-            }
+            try {
+                if (SPREADSHEET_WEBAPP_URL) {
+                    const res = await fetch(SPREADSHEET_WEBAPP_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify(payload)
+                    });
+                    const resData = await res.json();
+                    if (resData.status === "error") throw new Error(resData.message);
+                    muatDataDariSpreadsheet();
+                } else {
+                    const targetItem = databaseIntransit.find(i => i.id === idPinjam);
+                    if (targetItem) {
+                        if (targetItem.kupon > jmlKembali) {
+                            targetItem.kupon -= jmlKembali;
+                        } else {
+                            targetItem.status = "SELESAI";
+                        }
+                    }
+                    populateDropdownIntransit();
+                    renderTabelIntransit();
+                    hitungDanRenderSummary();
+                }
 
-            alert(`✅ ${jmlKembali} lembar kupon dikembalikan ke brankas.`);
-            formReturKupon.reset();
-            populateDropdownIntransit();
-            renderTabelIntransit();
-            hitungDanRenderSummary();
+                formReturKupon.reset();
+                showToast(`✅ ${jmlKembali} lembar kupon dikembalikan ke brankas.`, 'success');
+            } catch (err) {
+                console.error("Gagal retur kupon:", err);
+                showToast("⚠️ Gagal memproses retur: " + err.message, 'error');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = originalText;
+                }
+            }
         });
     }
 
     // Submit Form 4: Pembelian Baru
     const formPembelianKupon = document.getElementById('formPembelianKupon');
     if (formPembelianKupon) {
-        formPembelianKupon.addEventListener('submit', (e) => {
+        formPembelianKupon.addEventListener('submit', async (e) => {
             e.preventDefault();
 
             const bbm = document.getElementById('pembelianBbm').value;
             const jumlahKupon = parseInt(document.getElementById('pembelianKupon').value, 10);
             const bulan = document.getElementById('pembelianBulan').value;
+
+            const submitBtn = formPembelianKupon.querySelector('.btn-primary') || formPembelianKupon.querySelector('button[type="submit"]');
+            const originalText = submitBtn ? submitBtn.innerText : "Tambah Stok Pembelian";
+
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = "Menyimpan ke Sheet...";
+            }
 
             const payload = {
                 action: "pembelian_baru",
@@ -801,38 +930,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 bulan: bulan
             };
 
-            databasePembelian.push({
-                barang: bbm,
-                kupon: jumlahKupon,
-                bulan: bulan
-            });
-
-            if (SPREADSHEET_WEBAPP_URL) {
-                const submitBtn = formPembelianKupon.querySelector('.btn-primary');
-                submitBtn.disabled = true;
-                submitBtn.innerText = "Menyimpan ke Sheet...";
-
-                fetch(SPREADSHEET_WEBAPP_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify(payload)
-                })
-                    .then(res => res.json())
-                    .then(() => {
-                        alert(`✅ Pasokan ${jumlahKupon} lembar ${bbm} (${bulan}) berhasil ditambahkan ke sheet PEMBELIAN!`);
-                        formPembelianKupon.reset();
-                        muatDataDariSpreadsheet();
-                    })
-                    .catch(err => alert("Gagal menyimpan pembelian: " + err.message))
-                    .finally(() => {
-                        submitBtn.disabled = false;
-                        submitBtn.innerText = "Tambah Stok Pembelian";
+            try {
+                if (SPREADSHEET_WEBAPP_URL) {
+                    const res = await fetch(SPREADSHEET_WEBAPP_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify(payload)
                     });
-            } else {
-                renderTabelPembelian();
-                hitungDanRenderSummary();
-                formPembelianKupon.reset();
-                alert(`✅ Pasokan ${jumlahKupon} lembar ${bbm} berhasil ditambahkan!`);
+                    const resData = await res.json();
+                    if (resData.status === "error") throw new Error(resData.message);
+
+                    showToast(`✅ Pasokan ${jumlahKupon} lembar ${bbm} (${bulan}) berhasil ditambahkan!`, 'success');
+                    formPembelianKupon.reset();
+                    muatDataDariSpreadsheet();
+                } else {
+                    databasePembelian.push({ barang: bbm, kupon: jumlahKupon, bulan: bulan });
+                    renderTabelPembelian();
+                    hitungDanRenderSummary();
+                    formPembelianKupon.reset();
+                    showToast(`✅ Pasokan ${jumlahKupon} lembar ${bbm} berhasil ditambahkan!`, 'success');
+                }
+            } catch (err) {
+                console.error("Gagal menyimpan pembelian:", err);
+                showToast("⚠️ Gagal menyimpan pembelian: " + err.message, 'error');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = originalText;
+                }
             }
         });
     }
