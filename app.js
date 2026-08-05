@@ -29,7 +29,7 @@ const KENDARAAN_RULES = [
     { plat: "GENZET", label: "⚡ Genset Operasional (Dexlite)", keywords: ["GENZET", "GENSET"], bbm: "DEXLITE 200.000" }
 ];
 
-const SPREADSHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzVA2Bx19LabaLUACF6tUdHDNDVZg1evvBDAH9Nhl89fRdxakTglWfz3FgDNZ1AAf9Shw/exec";
+const SPREADSHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzooXR2L-9SPxz9HiWskOleWu4l35N4GEgDtzed_fNtxwSq-atI16Aa_deaAxtPLpa3Jg/exec";
 
 // Local App States
 let databaseNota = [];
