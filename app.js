@@ -1,7 +1,7 @@
 /**
  * ==============================================================
  * APP.JS — Sistem Manajemen & Rekonsiliasi Kupon BBM KPPD Bantul
- * Fully Updated: Fast Initial Load & Mobile View Sync
+ * Fully Updated: Fast Initial Load, Mobile View Sync & Data Security
  * ==============================================================
  */
 
@@ -29,7 +29,7 @@ const KENDARAAN_RULES = [
     { plat: "GENZET", label: "⚡ Genset Operasional (Dexlite)", keywords: ["GENZET", "GENSET"], bbm: "DEXLITE 200.000" }
 ];
 
-const SPREADSHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbw-LRu8SQhhwPRrraKXyAXILVBILxfB54H_uCuvd38SZRUCC6F6SxjsElbbOc4sFVZFCA/exec";
+const SPREADSHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzVA2Bx19LabaLUACF6tUdHDNDVZg1evvBDAH9Nhl89fRdxakTglWfz3FgDNZ1AAf9Shw/exec";
 
 // Local App States
 let databaseNota = [];
@@ -46,6 +46,19 @@ const BADGE_CLASS_MAP = {
     'PERTAMINA DEX 200.000': 'badge-dex'
 };
 
+/**
+ * Fungsi utilitas untuk melepaskan karakter HTML guna mencegah Cross-Site Scripting (XSS)
+ */
+function escapeHTML(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 function showToast(message, type = 'info') {
     const container = document.getElementById('toastContainer');
     if (!container) return;
@@ -58,7 +71,7 @@ function showToast(message, type = 'info') {
     if (type === 'error') icon = '⚠️';
     if (type === 'warning') icon = '🔔';
 
-    toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
+    toast.innerHTML = `<span>${icon}</span> <span>${escapeHTML(message)}</span>`;
     container.appendChild(toast);
 
     setTimeout(() => {
@@ -125,7 +138,7 @@ function setupCustomSelect(selectEl) {
     const updateTriggerText = () => {
         const selectedOpt = selectEl.options[selectEl.selectedIndex];
         trigger.innerHTML = `
-            <span>${selectedOpt ? selectedOpt.textContent : '-- Pilih --'}</span>
+            <span>${selectedOpt ? escapeHTML(selectedOpt.textContent) : '-- Pilih --'}</span>
             <span class="custom-select-arrow">▼</span>
         `;
     };
@@ -433,9 +446,9 @@ function hitungDanRenderSummary() {
 function setQuickDateFilter(type) {
     const elMulai = document.getElementById('filterTglMulai');
     const elSelesai = document.getElementById('filterTglSelesai');
-    
+
     document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
-    
+
     const now = new Date();
     const formatDate = (d) => {
         const year = d.getFullYear();
@@ -565,7 +578,7 @@ function renderTabel() {
         let tombolFotoHtml = `<span style="color:#94a3b8; font-size:11px;">Tanpa Foto</span>`;
 
         if (item.fotoUrl && String(item.fotoUrl).startsWith("http")) {
-            tombolFotoHtml = `<a href="${item.fotoUrl}" target="_blank" class="btn-view-photo">🔗 Drive</a>`;
+            tombolFotoHtml = `<a href="${encodeURI(item.fotoUrl)}" target="_blank" rel="noopener noreferrer" class="btn-view-photo">🔗 Drive</a>`;
         } else if (item.foto && String(item.foto).startsWith("data:image")) {
             const originalIndex = databaseNota.indexOf(item);
             tombolFotoHtml = `<button class="btn-view-photo" onclick="bukaModalFoto(${originalIndex})">👁️ Pratinjau</button>`;
@@ -573,11 +586,11 @@ function renderTabel() {
 
         tbody.innerHTML += `
             <tr>
-                <td style="font-family:monospace; font-weight:700;">${item.no || '-'}</td>
-                <td>${item.tanggal || '-'}</td>
-                <td><span class="badge ${badgeClass}">${item.bbm || '-'}</span></td>
-                <td><strong>${item.plat || '-'}</strong></td>
-                <td>${item.pemohon || '-'}</td>
+                <td style="font-family:monospace; font-weight:700;">${escapeHTML(item.no || '-')}</td>
+                <td>${escapeHTML(item.tanggal || '-')}</td>
+                <td><span class="badge ${badgeClass}">${escapeHTML(item.bbm || '-')}</span></td>
+                <td><strong>${escapeHTML(item.plat || '-')}</strong></td>
+                <td>${escapeHTML(item.pemohon || '-')}</td>
                 <td class="text-center" style="font-weight:700; color:#1e3a8a;">${jmlKupon} lbr</td>
                 <td class="text-right" style="font-weight:700">Rp${nominal.toLocaleString('id-ID')}</td>
                 <td class="text-center">${tombolFotoHtml}</td>
@@ -619,11 +632,11 @@ function renderTabelIntransit() {
 
             tbody.innerHTML += `
                 <tr>
-                    <td style="font-family:monospace; font-weight:700;">${item.id || 'REQ'}</td>
-                    <td>${item.tanggal || '-'}</td>
-                    <td style="font-weight:700; color:#1e3a8a;">${item.pemohon || '-'}</td>
-                    <td>${item.plat || '-'}</td>
-                    <td>${item.bbm || '-'}</td>
+                    <td style="font-family:monospace; font-weight:700;">${escapeHTML(item.id || 'REQ')}</td>
+                    <td>${escapeHTML(item.tanggal || '-')}</td>
+                    <td style="font-weight:700; color:#1e3a8a;">${escapeHTML(item.pemohon || '-')}</td>
+                    <td>${escapeHTML(item.plat || '-')}</td>
+                    <td>${escapeHTML(item.bbm || '-')}</td>
                     <td class="text-center" style="font-weight:700; color:#d97706;">${item.kupon} lbr</td>
                     <td class="text-center">${ageBadge}</td>
                     <td class="text-center"><span class="badge badge-dexlite">DIBEBAANKAN</span></td>
@@ -657,8 +670,8 @@ function renderTabelPembelian() {
 
         tbody.innerHTML += `
             <tr>
-                <td><strong>${item.bulan || '-'}</strong></td>
-                <td><span class="badge ${badgeClass}">${item.barang || '-'}</span></td>
+                <td><strong>${escapeHTML(item.bulan || '-')}</strong></td>
+                <td><span class="badge ${badgeClass}">${escapeHTML(item.barang || '-')}</span></td>
                 <td class="text-center" style="font-weight:700; color:#1e3a8a;">${jmlKupon} lbr</td>
                 <td class="text-right">Rp${nomPerKupon.toLocaleString('id-ID')}</td>
                 <td class="text-right" style="font-weight:700;">Rp${totalRp.toLocaleString('id-ID')}</td>
@@ -767,7 +780,10 @@ function bukaModalFoto(index) {
         return;
     }
     const modal = document.getElementById('photoViewerModal');
-    document.getElementById('modalPhotoTitle').innerText = `Nota Transaksi: ${item.no} (${item.plat})`;
+    const modalTitle = document.getElementById('modalPhotoTitle');
+    if (modalTitle) {
+        modalTitle.textContent = `Nota Transaksi: ${item.no || '-'} (${item.plat || '-'})`;
+    }
     document.getElementById('modalPhotoImage').src = item.foto || item.fotoUrl;
     modal.style.display = 'flex';
 }
@@ -1019,7 +1035,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const idPinjam = document.getElementById('returIdPinjamSelect').value;
             const jmlKembali = parseInt(document.getElementById('jmlRetur').value, 10);
-            const alasan = document.getElementById('alasanRetur').value;
+            const alasan = document.getElementById('alasanRetur').value.trim();
 
             const payload = {
                 action: "kembalikan_kupon",
@@ -1074,7 +1090,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const bbm = document.getElementById('pembelianBbm').value;
             const jumlahKupon = parseInt(document.getElementById('pembelianKupon').value, 10);
-            const bulan = document.getElementById('pembelianBulan').value;
+            const bulan = document.getElementById('pembelianBulan').value.trim();
 
             const submitBtn = formPembelianKupon.querySelector('.btn-primary') || formPembelianKupon.querySelector('button[type="submit"]');
             const originalText = submitBtn ? submitBtn.innerText : "Tambah Stok Pembelian";
