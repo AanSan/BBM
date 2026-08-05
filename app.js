@@ -8,25 +8,25 @@
 const APP_PASSWORD = "Persediaan123";
 
 const BBM_TYPES = [
-    { name: "PERTAMAX 20.000", nominalKupon: 20000 },
-    { name: "PERTAMAX 100.000 (SPBU PIRAMID)", nominalKupon: 100000 },
-    { name: "PERTAMAX 200.000", nominalKupon: 200000 },
-    { name: "DEXLITE 200.000", nominalKupon: 200000 },
-    { name: "PERTAMINA DEX 200.000", nominalKupon: 200000 }
+    { name: "PERTAMAX 20.000", label: "🟢 PERTAMAX Rp20.000 (Motor Ops)", nominalKupon: 20000 },
+    { name: "PERTAMAX 100.000 (SPBU PIRAMID)", label: "🔵 PERTAMAX Rp100.000 (SPBU Piramid)", nominalKupon: 100000 },
+    { name: "PERTAMAX 200.000", label: "🔵 PERTAMAX Rp200.000 (Mobil Ops)", nominalKupon: 200000 },
+    { name: "DEXLITE 200.000", label: "🟠 DEXLITE Rp200.000 (Diesel Ops)", nominalKupon: 200000 },
+    { name: "PERTAMINA DEX 200.000", label: "🟣 PERTAMINA DEX Rp200.000", nominalKupon: 200000 }
 ];
 
 const KENDARAAN_RULES = [
-    { plat: "AVANZA 86 B", keywords: ["86 B", "86B", "AVANZA 86"], bbm: "PERTAMAX 200.000" },
-    { plat: "JEMPOL 1132 BI", keywords: ["1132", "JEMPOL"], bbm: "PERTAMAX 100.000 (SPBU PIRAMID)" },
-    { plat: "PICK UP 8243 UA", keywords: ["8243", "PICK UP", "PICKUP"], bbm: "PERTAMAX 200.000" },
-    { plat: "SAMLING 7110 UA", keywords: ["7110", "SAMLING"], bbm: "DEXLITE 200.000" },
-    { plat: "L300 AB8073BI", keywords: ["8073", "L300", "AB8073BI"], bbm: "DEXLITE 200.000" },
-    { plat: "AVANZA 1000 IS", keywords: ["1000 IS", "1000IS", "1000"], bbm: "PERTAMAX 200.000" },
-    { plat: "SUPRA 2112 IA", keywords: ["2112 IA", "2112IA"], bbm: "PERTAMAX 20.000" },
-    { plat: "SUPRA 2112 UB", keywords: ["2112 UB", "2112UB"], bbm: "PERTAMAX 20.000" },
-    { plat: "SUPRA 2859 IS", keywords: ["2859", "SUPRA 2859"], bbm: "PERTAMAX 20.000" },
-    { plat: "GODOOR 2422 IF", keywords: ["2422", "GODOOR"], bbm: "PERTAMAX 20.000" },
-    { plat: "GENZET", keywords: ["GENZET", "GENSET"], bbm: "DEXLITE 200.000" }
+    { plat: "AVANZA 86 B", label: "🚘 Avanza AB 86 B (Ops Utama)", keywords: ["86 B", "86B", "AVANZA 86"], bbm: "PERTAMAX 200.000" },
+    { plat: "JEMPOL 1132 BI", label: "🚙 Jempol AB 1132 BI (SPBU Piramid)", keywords: ["1132", "JEMPOL"], bbm: "PERTAMAX 100.000 (SPBU PIRAMID)" },
+    { plat: "PICK UP 8243 UA", label: "🛻 Pick Up AB 8243 UA (Logistik)", keywords: ["8243", "PICK UP", "PICKUP"], bbm: "PERTAMAX 200.000" },
+    { plat: "SAMLING 7110 UA", label: "🚐 Samling AB 7110 UA (Dexlite)", keywords: ["7110", "SAMLING"], bbm: "DEXLITE 200.000" },
+    { plat: "L300 AB8073BI", label: "🚐 L300 AB 8073 BI (Dexlite Ops)", keywords: ["8073", "L300", "AB8073BI"], bbm: "DEXLITE 200.000" },
+    { plat: "AVANZA 1000 IS", label: "🚘 Avanza AB 1000 IS (Ops Kantor)", keywords: ["1000 IS", "1000IS", "1000"], bbm: "PERTAMAX 200.000" },
+    { plat: "SUPRA 2112 IA", label: "🛵 Supra AB 2112 IA (Motor Ops)", keywords: ["2112 IA", "2112IA"], bbm: "PERTAMAX 20.000" },
+    { plat: "SUPRA 2112 UB", label: "🛵 Supra AB 2112 UB (Motor Ops)", keywords: ["2112 UB", "2112UB"], bbm: "PERTAMAX 20.000" },
+    { plat: "SUPRA 2859 IS", label: "🛵 Supra AB 2859 IS (Motor Ops)", keywords: ["2859", "SUPRA 2859"], bbm: "PERTAMAX 20.000" },
+    { plat: "GODOOR 2422 IF", label: "🛵 Godoor AB 2422 IF (Motor Ops)", keywords: ["2422", "GODOOR"], bbm: "PERTAMAX 20.000" },
+    { plat: "GENZET", label: "⚡ Genset Operasional (Dexlite)", keywords: ["GENZET", "GENSET"], bbm: "DEXLITE 200.000" }
 ];
 
 const SPREADSHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbw-LRu8SQhhwPRrraKXyAXILVBILxfB54H_uCuvd38SZRUCC6F6SxjsElbbOc4sFVZFCA/exec";
@@ -79,12 +79,12 @@ function populateVehicleAndBbmDropdowns() {
     platSelects.forEach(select => {
         if (!select) return;
         const currentVal = select.value;
-        const firstOptText = select.id === 'platNomor' ? '-- Pilih Kendaraan Ops KPPD --' : '-- Pilih Kendaraan Ops --';
+        const firstOptText = select.id === 'platNomor' ? '🚗 -- Pilih Kendaraan Ops KPPD --' : '🚗 -- Pilih Kendaraan Ops --';
         select.innerHTML = `<option value="">${firstOptText}</option>`;
         KENDARAAN_RULES.forEach(item => {
             const opt = document.createElement('option');
             opt.value = item.plat;
-            opt.textContent = item.plat;
+            opt.textContent = item.label || item.plat;
             select.appendChild(opt);
         });
         if (currentVal) select.value = currentVal;
@@ -94,19 +94,97 @@ function populateVehicleAndBbmDropdowns() {
         if (!select) return;
         const currentVal = select.value;
         if (select.id === 'filterBbm') {
-            select.innerHTML = '<option value="">Semua Jenis BBM</option>';
+            select.innerHTML = '<option value="">🔍 Semua Jenis BBM</option>';
         } else {
-            select.innerHTML = '<option value="">-- Pilih Jenis BBM --</option>';
+            select.innerHTML = '<option value="">⛽ -- Pilih Jenis BBM / Voucher --</option>';
         }
         BBM_TYPES.forEach(item => {
             const opt = document.createElement('option');
             opt.value = item.name;
-            opt.textContent = item.name;
+            opt.textContent = item.label || item.name;
             select.appendChild(opt);
         });
         if (currentVal) select.value = currentVal;
     });
 }
+
+function setupCustomSelect(selectEl) {
+    if (!selectEl || selectEl.dataset.customInit === "true") return;
+
+    selectEl.style.display = 'none';
+    selectEl.dataset.customInit = "true";
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'custom-select-wrapper';
+    selectEl.parentNode.insertBefore(wrapper, selectEl);
+    wrapper.appendChild(selectEl);
+
+    const trigger = document.createElement('div');
+    trigger.className = 'custom-select-trigger';
+
+    const updateTriggerText = () => {
+        const selectedOpt = selectEl.options[selectEl.selectedIndex];
+        trigger.innerHTML = `
+            <span>${selectedOpt ? selectedOpt.textContent : '-- Pilih --'}</span>
+            <span class="custom-select-arrow">▼</span>
+        `;
+    };
+    updateTriggerText();
+    wrapper.appendChild(trigger);
+
+    const optionsContainer = document.createElement('div');
+    optionsContainer.className = 'custom-select-options';
+    wrapper.appendChild(optionsContainer);
+
+    const rebuildOptions = () => {
+        optionsContainer.innerHTML = '';
+        Array.from(selectEl.options).forEach((opt, idx) => {
+            const item = document.createElement('div');
+            item.className = `custom-option-item ${idx === selectEl.selectedIndex ? 'selected' : ''}`;
+            item.textContent = opt.textContent;
+            item.addEventListener('click', (e) => {
+                e.stopPropagation();
+                selectEl.selectedIndex = idx;
+                selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+                updateTriggerText();
+                rebuildOptions();
+                wrapper.classList.remove('open');
+            });
+            optionsContainer.appendChild(item);
+        });
+    };
+
+    rebuildOptions();
+
+    trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('.custom-select-wrapper').forEach(w => {
+            if (w !== wrapper) w.classList.remove('open');
+        });
+        wrapper.classList.toggle('open');
+    });
+
+    selectEl.addEventListener('change', () => {
+        updateTriggerText();
+        rebuildOptions();
+    });
+
+    const observer = new MutationObserver(() => {
+        updateTriggerText();
+        rebuildOptions();
+    });
+    observer.observe(selectEl, { childList: true, subtree: true });
+}
+
+function initAllCustomSelects() {
+    document.querySelectorAll('select').forEach(selectEl => {
+        setupCustomSelect(selectEl);
+    });
+}
+
+document.addEventListener('click', () => {
+    document.querySelectorAll('.custom-select-wrapper').forEach(w => w.classList.remove('open'));
+});
 
 function getNominalPerKupon(namaBbm) {
     if (!namaBbm) return 20000;
@@ -254,15 +332,15 @@ function populateDropdownIntransit() {
     const returIdPinjamSelect = document.getElementById('returIdPinjamSelect');
 
     if (idPinjamSelect) {
-        idPinjamSelect.innerHTML = '<option value="">-- Tanpa Tautan (Bukan Kupon Intransit) --</option>';
+        idPinjamSelect.innerHTML = '<option value="">🚫 -- Tanpa Tautan (Bukan Kupon Intransit) --</option>';
     }
     if (returIdPinjamSelect) {
-        returIdPinjamSelect.innerHTML = '<option value="">-- Pilih Data Intransit --</option>';
+        returIdPinjamSelect.innerHTML = '<option value="">⏳ -- Pilih Data Intransit --</option>';
     }
 
     databaseIntransit.forEach(item => {
         if (item.status === "PENDING" || !item.status) {
-            const optText = `${item.id || 'REQ'} - ${item.pemohon} (${item.plat}) - ${item.kupon} lbr ${item.bbm}`;
+            const optText = `⏳ ${item.id || 'REQ'} — ${item.pemohon} [${item.plat}] (${item.kupon} lbr ${item.bbm})`;
 
             if (idPinjamSelect) {
                 const opt = document.createElement('option');
@@ -341,21 +419,103 @@ function hitungDanRenderSummary() {
         document.getElementById('summaryTotalTerpakai').innerText = `${totalTerpakaiKupon} Lembar`;
         document.getElementById('summaryTotalTerpakaiRp').innerText = `Rp${totalTerpakaiRp.toLocaleString('id-ID')}`;
     }
+
+    ['summaryStokBrankas', 'summaryStokIntransit', 'summaryTotalTerpakai'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.classList.remove('stat-value-pop');
+            void el.offsetWidth;
+            el.classList.add('stat-value-pop');
+        }
+    });
+}
+
+function setQuickDateFilter(type) {
+    const elMulai = document.getElementById('filterTglMulai');
+    const elSelesai = document.getElementById('filterTglSelesai');
+    
+    document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+    
+    const now = new Date();
+    const formatDate = (d) => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    if (type === 'today') {
+        const todayStr = formatDate(now);
+        if (elMulai) elMulai.value = todayStr;
+        if (elSelesai) elSelesai.value = todayStr;
+        document.getElementById('btnPresetToday')?.classList.add('active');
+        showToast('⚡ Filter: Data Hari Ini', 'info');
+    } else if (type === 'thisMonth') {
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        if (elMulai) elMulai.value = formatDate(firstDay);
+        if (elSelesai) elSelesai.value = formatDate(lastDay);
+        document.getElementById('btnPresetThisMonth')?.classList.add('active');
+        showToast('🗓️ Filter: Data Bulan Ini', 'info');
+    } else if (type === 'lastMonth') {
+        const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const lastDay = new Date(now.getFullYear(), now.getMonth(), 0);
+        if (elMulai) elMulai.value = formatDate(firstDay);
+        if (elSelesai) elSelesai.value = formatDate(lastDay);
+        document.getElementById('btnPresetLastMonth')?.classList.add('active');
+        showToast('⏮️ Filter: Data Bulan Lalu', 'info');
+    } else {
+        if (elMulai) elMulai.value = '';
+        if (elSelesai) elSelesai.value = '';
+        document.getElementById('btnPresetSemua')?.classList.add('active');
+    }
+
+    renderTabel();
+}
+
+function resetAllFilters() {
+    const elMulai = document.getElementById('filterTglMulai');
+    const elSelesai = document.getElementById('filterTglSelesai');
+    const elBbm = document.getElementById('filterBbm');
+    const elPlat = document.getElementById('filterKendaraan');
+    const elSort = document.getElementById('sortBy');
+
+    if (elMulai) elMulai.value = '';
+    if (elSelesai) elSelesai.value = '';
+    if (elBbm) {
+        elBbm.value = '';
+        elBbm.dispatchEvent(new Event('change'));
+    }
+    if (elPlat) elPlat.value = '';
+    if (elSort) {
+        elSort.value = 'tanggal-desc';
+        elSort.dispatchEvent(new Event('change'));
+    }
+
+    document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('btnPresetSemua')?.classList.add('active');
+
+    renderTabel();
+    showToast('🧹 Seluruh filter telah dibersihkan', 'info');
 }
 
 function renderTabel() {
     const tbody = document.getElementById('tabelBody');
     if (!tbody) return;
 
-    const filterBulan = document.getElementById('filterBulan')?.value;
+    const tglMulai = document.getElementById('filterTglMulai')?.value;
+    const tglSelesai = document.getElementById('filterTglSelesai')?.value;
     const filterBbm = document.getElementById('filterBbm')?.value;
     const filterKendaraan = document.getElementById('filterKendaraan')?.value?.trim()?.toUpperCase();
     const sortBy = document.getElementById('sortBy')?.value || 'tanggal-desc';
 
     let filteredData = [...databaseNota];
 
-    if (filterBulan) {
-        filteredData = filteredData.filter(item => item.tanggal && item.tanggal.startsWith(filterBulan));
+    if (tglMulai) {
+        filteredData = filteredData.filter(item => item.tanggal && item.tanggal >= tglMulai);
+    }
+    if (tglSelesai) {
+        filteredData = filteredData.filter(item => item.tanggal && item.tanggal <= tglSelesai);
     }
 
     if (filterBbm) {
@@ -620,6 +780,7 @@ function tutupModalFoto() {
 // 4. DOM LOADED INITIALIZATION & LISTENERS
 document.addEventListener('DOMContentLoaded', () => {
     populateVehicleAndBbmDropdowns();
+    initAllCustomSelects();
 
     const loginModal = document.getElementById('loginModal');
     const loginForm = document.getElementById('loginForm');
@@ -963,12 +1124,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Filter Events Realtime
-    const fByMonth = document.getElementById('filterBulan');
+    const fTglMulai = document.getElementById('filterTglMulai');
+    const fTglSelesai = document.getElementById('filterTglSelesai');
     const fByBbm = document.getElementById('filterBbm');
     const fByPlat = document.getElementById('filterKendaraan');
     const sBy = document.getElementById('sortBy');
 
-    if (fByMonth) fByMonth.addEventListener('change', renderTabel);
+    if (fTglMulai) fTglMulai.addEventListener('change', renderTabel);
+    if (fTglSelesai) fTglSelesai.addEventListener('change', renderTabel);
     if (fByBbm) fByBbm.addEventListener('change', renderTabel);
     if (fByPlat) fByPlat.addEventListener('input', renderTabel);
     if (sBy) sBy.addEventListener('change', renderTabel);
