@@ -837,16 +837,10 @@ select:focus {
 
 .filter-row-inputs {
     display: grid;
-    grid-template-columns: minmax(130px, 1.1fr) minmax(130px, 1.1fr) minmax(175px, 1.5fr) minmax(200px, 2fr) minmax(170px, 1.4fr);
+    grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
     gap: 12px;
     align-items: end;
     width: 100%;
-}
-
-@media (max-width: 1100px) {
-    .filter-row-inputs {
-        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    }
 }
 
 .filter-item {

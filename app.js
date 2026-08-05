@@ -250,7 +250,10 @@ function tampilkanSkeletonLoading() {
 function muatDataDariSpreadsheet() {
     if (!SPREADSHEET_WEBAPP_URL) return;
 
-    tampilkanSkeletonLoading(); // Tampilkan loading sebelum fetch selesai
+    // Tampilkan loading skeleton HANYA jika data lokal belum pernah dimuat (awal buka app)
+    if (!databaseNota || databaseNota.length === 0) {
+        tampilkanSkeletonLoading();
+    }
 
     const fetchUrl = SPREADSHEET_WEBAPP_URL + "?nocache=" + new Date().getTime();
 
@@ -330,30 +333,52 @@ function switchViewTable(viewType) {
     }
 }
 
-// 3. SWITCHER HALAMAN UTAMA DI MOBILE HP (DISERTAI AUTO RE-RENDER)
+// 3. SWITCHER HALAMAN UTAMA DI MOBILE HP & RESIZE HANDLER DESKTOP
 function switchMainPage(pageType) {
     const formSection = document.getElementById('formPageSection');
     const tableSection = document.getElementById('tablePageSection');
     const btnForm = document.getElementById('navBtnForm');
     const btnTable = document.getElementById('navBtnTable');
 
-    if (pageType === 'formPage') {
-        if (formSection) formSection.style.display = 'block';
-        if (tableSection) tableSection.style.display = 'none';
-        if (btnForm) btnForm.classList.add('active');
-        if (btnTable) btnTable.classList.remove('active');
-    } else if (pageType === 'tablePage') {
-        if (formSection) formSection.style.display = 'none';
-        if (tableSection) tableSection.style.display = 'block';
-        if (btnForm) btnForm.classList.remove('active');
-        if (btnTable) btnTable.classList.add('active');
-
-        // Refresh tabel secara otomatis saat menu "Data & Laporan" dibuka
-        renderTabel();
-        renderTabelIntransit();
-        renderTabelPembelian();
+    if (window.innerWidth <= 992) {
+        if (pageType === 'formPage') {
+            if (formSection) formSection.style.display = 'block';
+            if (tableSection) tableSection.style.display = 'none';
+            if (btnForm) btnForm.classList.add('active');
+            if (btnTable) btnTable.classList.remove('active');
+        } else if (pageType === 'tablePage') {
+            if (formSection) formSection.style.display = 'none';
+            if (tableSection) tableSection.style.display = 'block';
+            if (btnForm) btnForm.classList.remove('active');
+            if (btnTable) btnTable.classList.add('active');
+        }
+    } else {
+        if (formSection) formSection.style.display = '';
+        if (tableSection) tableSection.style.display = '';
     }
+
+    renderTabel();
+    renderTabelIntransit();
+    renderTabelPembelian();
 }
+
+window.addEventListener('resize', () => {
+    const formSection = document.getElementById('formPageSection');
+    const tableSection = document.getElementById('tablePageSection');
+    if (window.innerWidth > 992) {
+        if (formSection) formSection.style.display = '';
+        if (tableSection) tableSection.style.display = '';
+    } else {
+        const btnForm = document.getElementById('navBtnForm');
+        if (btnForm && btnForm.classList.contains('active')) {
+            if (formSection) formSection.style.display = 'block';
+            if (tableSection) tableSection.style.display = 'none';
+        } else {
+            if (formSection) formSection.style.display = 'none';
+            if (tableSection) tableSection.style.display = 'block';
+        }
+    }
+});
 
 function populateDropdownIntransit() {
     const idPinjamSelect = document.getElementById('idPinjamSelect');
