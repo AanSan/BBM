@@ -7,7 +7,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#0f172a">
-    <title>Sistem Kelola & Rekonsiliasi Kupon BBM — KPPD Bantul</title>
+    <title>Sistem Kelola &amp; Rekonsiliasi Kupon BBM — KPPD Bantul</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
@@ -34,7 +34,7 @@
                     <input type="password" id="appPassword" placeholder="••••••••" required>
                 </div>
                 <div id="loginError" class="login-error-msg" style="display: none;">⚠️ Password tidak valid! Silakan coba lagi.</div>
-                <button type="submit" class="btn-primary full-width">Masuk Portal ➔</button>
+                <button type="submit" class="btn-primary full-width" id="loginBtn">Masuk Portal ➔</button>
             </form>
         </div>
     </div>
@@ -49,6 +49,159 @@
             <div class="image-preview-container">
                 <img id="modalPhotoImage" src="" alt="Pratinjau Nota BBM">
             </div>
+        </div>
+    </div>
+
+    <!-- Modal Edit Nota -->
+    <div id="editNotaModal" class="image-modal-overlay" style="display: none;">
+        <div class="edit-modal-card">
+            <button class="close-modal-btn" onclick="tutupModalEdit()">&times;</button>
+            <div class="modal-header">
+                <h3>✏️ Edit Data Nota</h3>
+            </div>
+            <form id="formEditNota" class="app-form">
+                <input type="hidden" id="editNotaRowIndex">
+                <div class="form-row">
+                    <div class="form-group col-6">
+                        <label for="editNoTransaksi">No. Transaksi</label>
+                        <input type="text" id="editNoTransaksi" required>
+                    </div>
+                    <div class="form-group col-6">
+                        <label for="editTanggalNota">Tanggal Nota</label>
+                        <input type="date" id="editTanggalNota" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="editPlatNomor">🚗 Kendaraan Dinas</label>
+                    <select id="editPlatNomor" required>
+                        <option value="">-- Pilih Kendaraan --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="editJenisBbm">⛽ Jenis BBM</label>
+                    <select id="editJenisBbm" required>
+                        <option value="">-- Pilih Jenis BBM --</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-6">
+                        <label for="editTotalHarga">Total Rp Nota</label>
+                        <input type="number" id="editTotalHarga" required>
+                    </div>
+                    <div class="form-group col-6">
+                        <label for="editNamaPemohon">Pemohon / Driver</label>
+                        <input type="text" id="editNamaPemohon">
+                    </div>
+                </div>
+                <div class="form-row" style="gap: 10px;">
+                    <button type="submit" class="btn-primary" style="flex:1;">💾 Simpan Perubahan</button>
+                    <button type="button" class="btn-action outline" style="flex:0 0 auto;" onclick="tutupModalEdit()">Batal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Edit Pembelian -->
+    <div id="editPembelianModal" class="image-modal-overlay" style="display: none;">
+        <div class="edit-modal-card">
+            <button class="close-modal-btn" onclick="tutupModalEditPembelian()">&times;</button>
+            <div class="modal-header">
+                <h3>✏️ Edit Data Pembelian</h3>
+            </div>
+            <form id="formEditPembelian" class="app-form">
+                <input type="hidden" id="editPembelianRowIndex">
+                <div class="form-group">
+                    <label for="editPembelianBbm">⛽ Jenis Voucher BBM</label>
+                    <select id="editPembelianBbm" required>
+                        <option value="">-- Pilih Jenis BBM --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="editPembelianKupon">🎫 Jumlah Kupon (Lembar)</label>
+                    <input type="number" id="editPembelianKupon" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label for="editPembelianBulan">📅 Bulan Pembelian</label>
+                    <select id="editPembelianBulan" required>
+                        <option value="">📅 -- Pilih Bulan --</option>
+                        <option value="Januari">🗓️ Januari</option>
+                        <option value="Februari">🗓️ Februari</option>
+                        <option value="Maret">🗓️ Maret</option>
+                        <option value="April">🗓️ April</option>
+                        <option value="Mei">🗓️ Mei</option>
+                        <option value="Juni">🗓️ Juni</option>
+                        <option value="Juli">🗓️ Juli</option>
+                        <option value="Agustus">🗓️ Agustus</option>
+                        <option value="September">🗓️ September</option>
+                        <option value="Oktober">🗓️ Oktober</option>
+                        <option value="November">🗓️ November</option>
+                        <option value="Desember">🗓️ Desember</option>
+                    </select>
+                </div>
+                <div class="form-row" style="gap: 10px;">
+                    <button type="submit" class="btn-primary" style="flex:1;">💾 Simpan Perubahan</button>
+                    <button type="button" class="btn-action outline" style="flex:0 0 auto;" onclick="tutupModalEditPembelian()">Batal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Konfirmasi Hapus -->
+    <div id="confirmDeleteModal" class="image-modal-overlay" style="display: none;">
+        <div class="confirm-modal-card">
+            <div class="confirm-icon">🗑️</div>
+            <h3 id="confirmDeleteTitle">Konfirmasi Hapus</h3>
+            <p id="confirmDeleteMsg">Apakah Anda yakin ingin menghapus data ini? Data akan diarsipkan dan tidak tampil di sistem.</p>
+            <div class="confirm-btn-group">
+                <button type="button" class="btn-danger" id="confirmDeleteBtn" onclick="eksekusiHapus()">🗑️ Ya, Hapus</button>
+                <button type="button" class="btn-action outline" onclick="tutupModalHapus()">Batal</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Ekspor Laporan -->
+    <div id="eksporModal" class="image-modal-overlay" style="display: none;">
+        <div class="edit-modal-card">
+            <button class="close-modal-btn" onclick="tutupModalEkspor()">&times;</button>
+            <div class="modal-header">
+                <h3>📥 Ekspor Laporan Rekapitulasi</h3>
+            </div>
+            <form id="formEkspor" class="app-form">
+                <div class="form-group">
+                    <label for="eksporJenis">📋 Jenis Laporan</label>
+                    <select id="eksporJenis">
+                        <option value="nota">📋 Log Pengeluaran Nota BBM</option>
+                        <option value="intransit">⏳ Kupon Intransit (Belum Selesai)</option>
+                        <option value="pembelian">📦 Riwayat Pembelian Kupon</option>
+                        <option value="rekap">📊 Rekapitulasi Stok Lengkap</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-6">
+                        <label for="eksporBulan">📅 Bulan</label>
+                        <select id="eksporBulan">
+                            <option value="">📅 Semua Bulan</option>
+                            <option value="01">Januari</option>
+                            <option value="02">Februari</option>
+                            <option value="03">Maret</option>
+                            <option value="04">April</option>
+                            <option value="05">Mei</option>
+                            <option value="06">Juni</option>
+                            <option value="07">Juli</option>
+                            <option value="08">Agustus</option>
+                            <option value="09">September</option>
+                            <option value="10">Oktober</option>
+                            <option value="11">November</option>
+                            <option value="12">Desember</option>
+                        </select>
+                    </div>
+                    <div class="form-group col-6">
+                        <label for="eksporTahun">📅 Tahun</label>
+                        <input type="number" id="eksporTahun" min="2020" max="2030" value="2026">
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary full-width">📥 Download CSV Laporan</button>
+            </form>
         </div>
     </div>
 
@@ -105,6 +258,11 @@
                     <span id="summaryTotalTerpakaiRp" class="stat-sub">Rp0</span>
                 </div>
             </div>
+        </section>
+
+        <!-- Breakdown Stok Per Jenis BBM -->
+        <section id="stokPerJenisContainer" class="stok-breakdown-section">
+            <!-- Diisi oleh JavaScript -->
         </section>
 
         <!-- MAIN PAGE SWITCHER (STICKY TAB DI MOBILE & TABLET) -->
@@ -229,6 +387,10 @@
                             <label for="jmlKuponAmbil">🎫 Jumlah Kupon (Lembar)</label>
                             <input type="number" id="jmlKuponAmbil" min="1" placeholder="Contoh: 5" required>
                         </div>
+                        <!-- Info Sisa Stok -->
+                        <div id="infoSisaStok" class="info-sisa-stok" style="display: none;">
+                            📦 Sisa brankas jenis ini: <strong id="sisaStokJenis">0</strong> lembar
+                        </div>
                         <button type="submit" class="btn-warning full-width">🚚 Serahkan Kupon (Intransit)</button>
                     </form>
                 </div>
@@ -312,6 +474,9 @@
                     <button class="switcher-btn" id="viewBtnPembelian" onclick="switchViewTable('pembelianTable')">
                         📦 Riwayat Pembelian
                     </button>
+                    <button class="switcher-btn switcher-btn-export" id="viewBtnEkspor" onclick="bukaModalEkspor()">
+                        📥 Ekspor
+                    </button>
                 </div>
 
                 <!-- TABEL 1: NOTA SPBU TERPAKAI -->
@@ -372,6 +537,7 @@
                                     <th class="text-center">Voucher</th>
                                     <th class="text-right">Total Rp</th>
                                     <th class="text-center">Lampiran</th>
+                                    <th class="text-center">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody id="tabelBody">
@@ -423,6 +589,7 @@
                                     <th class="text-center">Jumlah Kupon</th>
                                     <th class="text-right">Nominal Per Kupon</th>
                                     <th class="text-right">Total Anggaran (Rp)</th>
+                                    <th class="text-center">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody id="tabelPembelianBody">
@@ -434,6 +601,7 @@
             </main>
         </div>
     </div>
+
 
 </body>
 

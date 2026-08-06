@@ -1227,3 +1227,315 @@ select:focus {
     0% { background-position: -200% 0; }
     100% { background-position: 200% 0; }
 }
+
+/* ==============================================================
+   11. BREAKDOWN STOK PER JENIS BBM
+   ============================================================== */
+.stok-breakdown-section {
+    margin-bottom: 18px;
+    background: var(--card-bg);
+    border-radius: 20px;
+    padding: 18px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-md);
+}
+
+.breakdown-title {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--text-dark);
+    margin-bottom: 14px;
+    letter-spacing: -0.2px;
+}
+
+.breakdown-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.breakdown-item {
+    background: #f8fafc;
+    border-radius: 14px;
+    padding: 12px 14px;
+    border: 1px solid var(--border-color);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.breakdown-item:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.breakdown-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.breakdown-kupon {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--text-dark);
+    letter-spacing: -0.3px;
+}
+
+.breakdown-bar-track {
+    height: 6px;
+    background: #e2e8f0;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 6px;
+}
+
+.breakdown-bar-fill {
+    height: 100%;
+    border-radius: 6px;
+    transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    min-width: 2px;
+}
+
+.breakdown-bar-fill.badge-pertamax { background: linear-gradient(90deg, #4f46e5, #818cf8); }
+.breakdown-bar-fill.badge-pertalite { background: linear-gradient(90deg, #059669, #34d399); }
+.breakdown-bar-fill.badge-dexlite { background: linear-gradient(90deg, #d97706, #fbbf24); }
+.breakdown-bar-fill.badge-dex { background: linear-gradient(90deg, #7c3aed, #a78bfa); }
+.breakdown-bar-fill.badge-default { background: linear-gradient(90deg, #64748b, #94a3b8); }
+
+.breakdown-item-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.breakdown-rp {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+.breakdown-pct {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--primary-indigo);
+    background: var(--primary-indigo-light);
+    padding: 2px 6px;
+    border-radius: 6px;
+}
+
+/* ==============================================================
+   12. EDIT / HAPUS MODAL & AKSI BUTTONS
+   ============================================================== */
+.edit-modal-card {
+    background: #ffffff;
+    padding: 24px 20px;
+    border-radius: 24px;
+    width: 100%;
+    max-width: 480px;
+    box-shadow: var(--shadow-lg);
+    position: relative;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.confirm-modal-card {
+    background: #ffffff;
+    padding: 28px 24px;
+    border-radius: 24px;
+    width: 100%;
+    max-width: 380px;
+    box-shadow: var(--shadow-lg);
+    text-align: center;
+    position: relative;
+}
+
+.confirm-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+}
+
+.confirm-modal-card h3 {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text-dark);
+    margin-bottom: 8px;
+}
+
+.confirm-modal-card p {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin-bottom: 20px;
+}
+
+.confirm-btn-group {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.btn-danger {
+    min-height: 44px;
+    padding: 10px 20px;
+    border-radius: 14px;
+    font-weight: 700;
+    font-size: 14px;
+    border: none;
+    cursor: pointer;
+    background: linear-gradient(135deg, #e11d48 0%, #f43f5e 100%);
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(244, 63, 94, 0.3);
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.btn-danger:hover {
+    box-shadow: 0 6px 16px rgba(244, 63, 94, 0.4);
+    transform: translateY(-1px);
+}
+
+.btn-danger:active {
+    transform: scale(0.97);
+}
+
+.aksi-btn-group {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+}
+
+.btn-aksi {
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: #ffffff;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    padding: 0;
+}
+
+.btn-aksi:active {
+    transform: scale(0.9);
+}
+
+.btn-aksi-edit:hover {
+    background: var(--primary-indigo-light);
+    border-color: var(--primary-indigo);
+    color: var(--primary-indigo);
+}
+
+.btn-aksi-hapus:hover {
+    background: var(--danger-rose-light);
+    border-color: var(--danger-rose);
+    color: var(--danger-rose);
+}
+
+.modal-header {
+    margin-bottom: 16px;
+}
+
+.modal-header h3 {
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--text-dark);
+}
+
+/* ==============================================================
+   13. INFO SISA STOK INDICATOR
+   ============================================================== */
+.info-sisa-stok {
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.info-stok-ok {
+    background: var(--success-emerald-light);
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+
+.info-stok-habis {
+    background: var(--danger-rose-light);
+    color: #9f1239;
+    border: 1px solid #fecdd3;
+}
+
+/* ==============================================================
+   14. EXPORT BUTTON IN VIEW SWITCHER
+   ============================================================== */
+.switcher-btn-export {
+    margin-left: auto;
+    background: linear-gradient(135deg, #059669, #10b981);
+    color: #ffffff !important;
+    border-radius: 12px;
+    padding: 8px 16px !important;
+    font-weight: 800 !important;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+    transition: all 0.2s ease;
+}
+
+.switcher-btn-export:hover {
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+    transform: translateY(-1px);
+}
+
+/* ==============================================================
+   15. MOBILE RESPONSIVE FOR NEW COMPONENTS
+   ============================================================== */
+@media (max-width: 768px) {
+    .breakdown-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .breakdown-item {
+        padding: 10px 12px;
+    }
+
+    .breakdown-kupon {
+        font-size: 14px;
+    }
+
+    .edit-modal-card {
+        max-width: 95%;
+        padding: 18px 16px;
+    }
+
+    .confirm-modal-card {
+        max-width: 90%;
+    }
+
+    .aksi-btn-group {
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .btn-aksi {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+    }
+
+    .switcher-btn-export {
+        margin-left: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .breakdown-grid {
+        grid-template-columns: 1fr;
+    }
+}

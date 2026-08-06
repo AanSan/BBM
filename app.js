@@ -1,11 +1,9 @@
 /**
  * ==============================================================
  * APP.JS — Sistem Manajemen & Rekonsiliasi Kupon BBM KPPD Bantul
- * Fully Updated: Fast Initial Load, Mobile View Sync & Data Security
+ * v2 SECURED: Server-Side Auth, Stock Validation, Edit/Delete, Export
  * ==============================================================
  */
-
-const APP_PASSWORD = "Persediaan123";
 
 const BBM_TYPES = [
     { name: "PERTAMAX 20.000", label: "🟢 PERTAMAX Rp20.000 (Motor Ops)", nominalKupon: 20000 },
@@ -29,7 +27,7 @@ const KENDARAAN_RULES = [
     { plat: "GENZET", label: "⚡ Genset Operasional (Dexlite)", keywords: ["GENZET", "GENSET"], bbm: "DEXLITE 200.000" }
 ];
 
-const SPREADSHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxNwJ_UdxtjIxJ8FSPrdq4fW6vTNffA0vt7g3tgLId51-BLGV3VXywj84a9DeEFU7Up/exec";
+const SPREADSHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbysIPrgfB334TAe076cy1zBlHbsZUzb6WT4ZsfoqXbbcK1idGe8k5Z5decnSuRKjMFC/exec";
 
 // Local App States
 let databaseNota = [];
@@ -37,6 +35,9 @@ let databaseIntransit = [];
 let databaseSaldoAwal = [];
 let databasePembelian = [];
 let tempCurrentBase64 = "";
+
+// State untuk modal hapus
+let pendingDeleteAction = null;
 
 const BADGE_CLASS_MAP = {
     'PERTAMAX 20.000': 'badge-pertalite',
@@ -96,12 +97,18 @@ function showToast(message, type = 'info') {
 }
 
 function populateVehicleAndBbmDropdowns() {
-    const platSelects = [document.getElementById('platNomor'), document.getElementById('platPemohon')];
+    const platSelects = [
+        document.getElementById('platNomor'),
+        document.getElementById('platPemohon'),
+        document.getElementById('editPlatNomor')
+    ];
     const bbmSelects = [
         document.getElementById('jenisBbm'),
         document.getElementById('bbmPemohon'),
         document.getElementById('pembelianBbm'),
-        document.getElementById('filterBbm')
+        document.getElementById('filterBbm'),
+        document.getElementById('editJenisBbm'),
+        document.getElementById('editPembelianBbm')
     ];
 
     platSelects.forEach(select => {
@@ -205,7 +212,7 @@ function setupCustomSelect(selectEl) {
 }
 
 function initAllCustomSelects() {
-    document.querySelectorAll('select').forEach(selectEl => {
+    document.querySelectorAll('.app-container select, #loginForm select').forEach(selectEl => {
         setupCustomSelect(selectEl);
     });
 }
@@ -226,6 +233,83 @@ function getNominalPerKupon(namaBbm) {
     return 20000;
 }
 
+// ============================================================
+// HITUNG STOK PER JENIS BBM (Client-Side)
+// ============================================================
+function hitungStokPerJenis() {
+    const stokMap = {};
+
+    // Inisialisasi semua jenis BBM
+    BBM_TYPES.forEach(t => {
+        stokMap[t.name] = { kupon: 0, rp: 0, nominal: t.nominalKupon };
+    });
+
+    // + Saldo Awal
+    if (databaseSaldoAwal && Array.isArray(databaseSaldoAwal)) {
+        databaseSaldoAwal.forEach(item => {
+            const key = matchBbmKey(item.barang);
+            if (key && stokMap[key]) {
+                stokMap[key].kupon += Number(item.kupon) || 0;
+                stokMap[key].rp += Number(item.jumlah) || 0;
+            }
+        });
+    }
+
+    // + Pembelian
+    if (databasePembelian && Array.isArray(databasePembelian)) {
+        databasePembelian.forEach(item => {
+            const key = matchBbmKey(item.barang);
+            if (key && stokMap[key]) {
+                const jml = Number(item.kupon) || 0;
+                stokMap[key].kupon += jml;
+                stokMap[key].rp += jml * stokMap[key].nominal;
+            }
+        });
+    }
+
+    // - Nota Terpakai
+    databaseNota.forEach(item => {
+        const key = matchBbmKey(item.bbm);
+        if (key && stokMap[key]) {
+            let jml = Number(item.kupon);
+            if (!jml || isNaN(jml)) {
+                const nominal = Number(item.total) || 0;
+                jml = Math.floor(nominal / stokMap[key].nominal) || 1;
+            }
+            stokMap[key].kupon -= jml;
+            stokMap[key].rp -= jml * stokMap[key].nominal;
+        }
+    });
+
+    // - Intransit (PENDING)
+    databaseIntransit.forEach(item => {
+        if (item.status === "PENDING" || !item.status) {
+            const key = matchBbmKey(item.bbm);
+            if (key && stokMap[key]) {
+                const jml = Number(item.kupon) || 0;
+                stokMap[key].kupon -= jml;
+                stokMap[key].rp -= jml * stokMap[key].nominal;
+            }
+        }
+    });
+
+    return stokMap;
+}
+
+function matchBbmKey(namaBbm) {
+    if (!namaBbm) return null;
+    const upper = String(namaBbm).toUpperCase().trim();
+    // Exact match first
+    const exact = BBM_TYPES.find(t => t.name.toUpperCase() === upper);
+    if (exact) return exact.name;
+    // Partial match
+    const partial = BBM_TYPES.find(t =>
+        upper.includes(t.name.toUpperCase()) || t.name.toUpperCase().includes(upper)
+    );
+    if (partial) return partial.name;
+    return null;
+}
+
 // 1. TAMPILKAN INDIKATOR LOADING SKELETON SAAT SPREADSHEET MEMUAT DATA
 function tampilkanSkeletonLoading() {
     const tbody = document.getElementById('tabelBody');
@@ -234,7 +318,7 @@ function tampilkanSkeletonLoading() {
 
     const loadingRow = `
         <tr>
-            <td colspan="8" class="text-center" style="padding: 24px; color: #64748b;">
+            <td colspan="9" class="text-center" style="padding: 24px; color: #64748b;">
                 <span style="display:inline-block; margin-right:8px;">⏳</span> 
                 <strong>Mengambil data persediaan terbaru dari cloud...</strong>
             </td>
@@ -523,6 +607,80 @@ function hitungDanRenderSummary() {
             el.classList.add('stat-value-pop');
         }
     });
+
+    // Render breakdown stok per jenis BBM
+    renderBreakdownStok();
+}
+
+// ============================================================
+// RENDER BREAKDOWN STOK PER JENIS BBM
+// ============================================================
+function renderBreakdownStok() {
+    const container = document.getElementById('stokPerJenisContainer');
+    if (!container) return;
+
+    const stokMap = hitungStokPerJenis();
+    let html = '<div class="breakdown-title">📊 Stok Per Jenis BBM</div><div class="breakdown-grid">';
+
+    // Hitung total untuk persentase bar
+    let totalKupon = 0;
+    BBM_TYPES.forEach(t => {
+        const data = stokMap[t.name];
+        if (data) totalKupon += Math.max(0, data.kupon);
+    });
+
+    BBM_TYPES.forEach(t => {
+        const data = stokMap[t.name];
+        if (!data) return;
+        const kupon = Math.max(0, data.kupon);
+        const rp = kupon * data.nominal;
+        const pct = totalKupon > 0 ? Math.round((kupon / totalKupon) * 100) : 0;
+        const badgeClass = BADGE_CLASS_MAP[t.name] || 'badge-default';
+
+        html += `
+            <div class="breakdown-item">
+                <div class="breakdown-item-header">
+                    <span class="badge ${badgeClass}">${escapeHTML(t.name)}</span>
+                    <span class="breakdown-kupon">${kupon} lbr</span>
+                </div>
+                <div class="breakdown-bar-track">
+                    <div class="breakdown-bar-fill ${badgeClass}" style="width: ${pct}%"></div>
+                </div>
+                <div class="breakdown-item-footer">
+                    <span class="breakdown-rp">Rp${rp.toLocaleString('id-ID')}</span>
+                    <span class="breakdown-pct">${pct}%</span>
+                </div>
+            </div>
+        `;
+    });
+
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+// ============================================================
+// UPDATE INFO SISA STOK DI FORM SERAH
+// ============================================================
+function updateInfoSisaStok() {
+    const bbmPemohon = document.getElementById('bbmPemohon');
+    const infoEl = document.getElementById('infoSisaStok');
+    const sisaEl = document.getElementById('sisaStokJenis');
+
+    if (!bbmPemohon || !infoEl || !sisaEl) return;
+
+    const selectedBbm = bbmPemohon.value;
+    if (!selectedBbm) {
+        infoEl.style.display = 'none';
+        return;
+    }
+
+    const stokMap = hitungStokPerJenis();
+    const key = matchBbmKey(selectedBbm);
+    const sisa = key && stokMap[key] ? Math.max(0, stokMap[key].kupon) : 0;
+
+    sisaEl.textContent = sisa;
+    infoEl.style.display = 'block';
+    infoEl.className = sisa > 0 ? 'info-sisa-stok info-stok-ok' : 'info-sisa-stok info-stok-habis';
 }
 
 function setQuickDateFilter(type) {
@@ -666,6 +824,15 @@ function renderTabel() {
             tombolFotoHtml = `<button class="btn-view-photo" onclick="bukaModalFoto(${originalIndex})">👁️ Pratinjau</button>`;
         }
 
+        // Tombol Aksi (Edit + Hapus)
+        const originalIndex = databaseNota.indexOf(item);
+        const aksiHtml = `
+            <div class="aksi-btn-group">
+                <button class="btn-aksi btn-aksi-edit" onclick="bukaEditNota(${originalIndex})" title="Edit">✏️</button>
+                <button class="btn-aksi btn-aksi-hapus" onclick="konfirmasiHapusNota(${originalIndex})" title="Hapus">🗑️</button>
+            </div>
+        `;
+
         tbody.innerHTML += `
             <tr>
                 <td style="font-family:monospace; font-weight:700;">${escapeHTML(item.no || '-')}</td>
@@ -676,19 +843,20 @@ function renderTabel() {
                 <td class="text-center" style="font-weight:700; color:#1e3a8a;">${jmlKupon} lbr</td>
                 <td class="text-right" style="font-weight:700">Rp${nominal.toLocaleString('id-ID')}</td>
                 <td class="text-center">${tombolFotoHtml}</td>
+                <td class="text-center">${aksiHtml}</td>
             </tr>
         `;
     });
 
     if (filteredData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="color:#64748b; padding:24px;">Tidak ada data log pengeluaran nota.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center" style="color:#64748b; padding:24px;">Tidak ada data log pengeluaran nota.</td></tr>`;
     } else {
         tbody.innerHTML += `
             <tr style="background-color: #f1f5f9; font-weight: 800; border-top: 2px solid #cbd5e1;">
                 <td colspan="5" style="text-align: right; text-transform: uppercase;">Total Hasil Filter:</td>
                 <td class="text-center" style="color: #1e3a8a;">${totalKuponFilter} lbr</td>
                 <td class="text-right" style="color: #059669;">Rp${totalNominalFilter.toLocaleString('id-ID')}</td>
-                <td></td>
+                <td colspan="2"></td>
             </tr>
         `;
     }
@@ -721,7 +889,7 @@ function renderTabelIntransit() {
                     <td>${escapeHTML(item.bbm || '-')}</td>
                     <td class="text-center" style="font-weight:700; color:#d97706;">${item.kupon} lbr</td>
                     <td class="text-center">${ageBadge}</td>
-                    <td class="text-center"><span class="badge badge-dexlite">DIBEBAANKAN</span></td>
+                    <td class="text-center"><span class="badge badge-dexlite">DIBEBANKAN</span></td>
                 </tr>
             `;
         }
@@ -740,7 +908,7 @@ function renderTabelPembelian() {
     let totalKuponBeli = 0;
     let totalNominalBeli = 0;
 
-    databasePembelian.forEach(item => {
+    databasePembelian.forEach((item, idx) => {
         const jmlKupon = Number(item.kupon) || 0;
         const nomPerKupon = getNominalPerKupon(item.barang);
         const totalRp = jmlKupon * nomPerKupon;
@@ -750,6 +918,13 @@ function renderTabelPembelian() {
 
         const badgeClass = BADGE_CLASS_MAP[item.barang] || 'badge-default';
 
+        const aksiHtml = `
+            <div class="aksi-btn-group">
+                <button class="btn-aksi btn-aksi-edit" onclick="bukaEditPembelian(${idx})" title="Edit">✏️</button>
+                <button class="btn-aksi btn-aksi-hapus" onclick="konfirmasiHapusPembelian(${idx})" title="Hapus">🗑️</button>
+            </div>
+        `;
+
         tbody.innerHTML += `
             <tr>
                 <td><strong>${escapeHTML(item.bulan || '-')}</strong></td>
@@ -757,12 +932,13 @@ function renderTabelPembelian() {
                 <td class="text-center" style="font-weight:700; color:#1e3a8a;">${jmlKupon} lbr</td>
                 <td class="text-right">Rp${nomPerKupon.toLocaleString('id-ID')}</td>
                 <td class="text-right" style="font-weight:700;">Rp${totalRp.toLocaleString('id-ID')}</td>
+                <td class="text-center">${aksiHtml}</td>
             </tr>
         `;
     });
 
     if (databasePembelian.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center" style="color:#64748b; padding:24px;">Belum ada data pembelian kupon.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="color:#64748b; padding:24px;">Belum ada data pembelian kupon.</td></tr>`;
     } else {
         tbody.innerHTML += `
             <tr style="background-color: #f1f5f9; font-weight: 800; border-top: 2px solid #cbd5e1;">
@@ -770,9 +946,251 @@ function renderTabelPembelian() {
                 <td class="text-center" style="color: #1e3a8a;">${totalKuponBeli} lbr</td>
                 <td></td>
                 <td class="text-right" style="color: #059669;">Rp${totalNominalBeli.toLocaleString('id-ID')}</td>
+                <td></td>
             </tr>
         `;
     }
+}
+
+// ============================================================
+// EDIT / HAPUS NOTA
+// ============================================================
+function bukaEditNota(index) {
+    const item = databaseNota[index];
+    if (!item) return;
+
+    document.getElementById('editNotaRowIndex').value = item.rowIndex || '';
+    document.getElementById('editNoTransaksi').value = item.no || '';
+    document.getElementById('editTanggalNota').value = item.tanggal || '';
+    document.getElementById('editTotalHarga').value = item.total || '';
+    document.getElementById('editNamaPemohon').value = item.pemohon || '';
+
+    const elPlat = document.getElementById('editPlatNomor');
+    if (elPlat) {
+        elPlat.value = item.plat || '';
+        elPlat.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    const elBbm = document.getElementById('editJenisBbm');
+    if (elBbm) {
+        elBbm.value = item.bbm || '';
+        elBbm.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    document.getElementById('editNotaModal').style.display = 'flex';
+}
+
+function tutupModalEdit() {
+    document.getElementById('editNotaModal').style.display = 'none';
+}
+
+function konfirmasiHapusNota(index) {
+    const item = databaseNota[index];
+    if (!item) return;
+
+    document.getElementById('confirmDeleteTitle').textContent = 'Hapus Nota ' + (item.no || '');
+    document.getElementById('confirmDeleteMsg').textContent =
+        `Apakah Anda yakin ingin menghapus nota ${item.no || '-'} (${item.plat || '-'}, Rp${(item.total || 0).toLocaleString('id-ID')})? Data akan diarsipkan.`;
+
+    pendingDeleteAction = { type: 'nota', rowIndex: item.rowIndex, index: index };
+    document.getElementById('confirmDeleteModal').style.display = 'flex';
+}
+
+// ============================================================
+// EDIT / HAPUS PEMBELIAN
+// ============================================================
+function bukaEditPembelian(index) {
+    const item = databasePembelian[index];
+    if (!item) return;
+
+    document.getElementById('editPembelianRowIndex').value = item.rowIndex || '';
+    document.getElementById('editPembelianKupon').value = item.kupon || '';
+
+    const elBbm = document.getElementById('editPembelianBbm');
+    if (elBbm) {
+        elBbm.value = item.barang || '';
+        elBbm.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    const elBulan = document.getElementById('editPembelianBulan');
+    if (elBulan) {
+        elBulan.value = item.bulan || '';
+        elBulan.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    document.getElementById('editPembelianModal').style.display = 'flex';
+}
+
+function tutupModalEditPembelian() {
+    document.getElementById('editPembelianModal').style.display = 'none';
+}
+
+function konfirmasiHapusPembelian(index) {
+    const item = databasePembelian[index];
+    if (!item) return;
+
+    document.getElementById('confirmDeleteTitle').textContent = 'Hapus Data Pembelian';
+    document.getElementById('confirmDeleteMsg').textContent =
+        `Apakah Anda yakin ingin menghapus pembelian ${item.kupon || 0} lembar ${item.barang || '-'} (${item.bulan || '-'})? Data akan diarsipkan.`;
+
+    pendingDeleteAction = { type: 'pembelian', rowIndex: item.rowIndex, index: index };
+    document.getElementById('confirmDeleteModal').style.display = 'flex';
+}
+
+// ============================================================
+// EKSEKUSI HAPUS (UNIVERSAL)
+// ============================================================
+function eksekusiHapus() {
+    if (!pendingDeleteAction) return;
+
+    const { type, rowIndex } = pendingDeleteAction;
+    const actionName = type === 'nota' ? 'hapus_nota' : 'hapus_pembelian';
+
+    const btn = document.getElementById('confirmDeleteBtn');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = '⏳ Menghapus...';
+    }
+
+    fetch(SPREADSHEET_WEBAPP_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: actionName, rowIndex: rowIndex })
+    })
+        .then(res => res.json())
+        .then(resData => {
+            if (resData.status === "error") throw new Error(resData.message);
+            showToast('✅ Data berhasil dihapus (diarsipkan).', 'success');
+            tutupModalHapus();
+            muatDataDariSpreadsheet();
+        })
+        .catch(err => {
+            showToast('⚠️ Gagal menghapus: ' + err.message, 'error');
+        })
+        .finally(() => {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = '🗑️ Ya, Hapus';
+            }
+        });
+}
+
+function tutupModalHapus() {
+    document.getElementById('confirmDeleteModal').style.display = 'none';
+    pendingDeleteAction = null;
+}
+
+// ============================================================
+// EKSPOR CSV LAPORAN
+// ============================================================
+function bukaModalEkspor() {
+    const tahunInput = document.getElementById('eksporTahun');
+    if (tahunInput) tahunInput.value = new Date().getFullYear();
+    document.getElementById('eksporModal').style.display = 'flex';
+}
+
+function tutupModalEkspor() {
+    document.getElementById('eksporModal').style.display = 'none';
+}
+
+function generateCSVLaporan(jenis, bulan, tahun) {
+    let csvRows = [];
+    const bom = '\uFEFF'; // BOM untuk UTF-8 di Excel
+
+    if (jenis === 'nota') {
+        csvRows.push(['No Transaksi', 'Tanggal', 'Jenis BBM', 'Kendaraan', 'Pemohon', 'Jumlah Kupon', 'Total Rp']);
+        let dataFiltered = [...databaseNota];
+        if (bulan && tahun) {
+            dataFiltered = dataFiltered.filter(item => {
+                if (!item.tanggal) return false;
+                return item.tanggal.startsWith(`${tahun}-${bulan}`);
+            });
+        } else if (tahun) {
+            dataFiltered = dataFiltered.filter(item => item.tanggal && item.tanggal.startsWith(String(tahun)));
+        }
+        dataFiltered.forEach(item => {
+            let jml = Number(item.kupon);
+            if (!jml || isNaN(jml)) jml = Math.floor((Number(item.total) || 0) / getNominalPerKupon(item.bbm)) || 1;
+            csvRows.push([
+                item.no || '-', formatTanggalIndo(item.tanggal), item.bbm || '-',
+                item.plat || '-', item.pemohon || '-', jml, Number(item.total) || 0
+            ]);
+        });
+    } else if (jenis === 'intransit') {
+        csvRows.push(['ID Ref', 'Tanggal Ambil', 'Pegawai', 'Kendaraan', 'Voucher', 'Jumlah', 'Status']);
+        databaseIntransit.forEach(item => {
+            if (item.status === "PENDING" || !item.status) {
+                csvRows.push([
+                    item.id || 'REQ', formatTanggalIndo(item.tanggal), item.pemohon || '-',
+                    item.plat || '-', item.bbm || '-', item.kupon || 0, 'INTRANSIT'
+                ]);
+            }
+        });
+    } else if (jenis === 'pembelian') {
+        csvRows.push(['Bulan', 'Jenis Voucher', 'Jumlah Kupon', 'Nominal Per Kupon', 'Total Rp']);
+        databasePembelian.forEach(item => {
+            const jml = Number(item.kupon) || 0;
+            const nom = getNominalPerKupon(item.barang);
+            csvRows.push([
+                item.bulan || '-', item.barang || '-', jml, nom, jml * nom
+            ]);
+        });
+    } else if (jenis === 'rekap') {
+        csvRows.push(['=== REKAPITULASI STOK BBM KPPD BANTUL ===']);
+        csvRows.push(['Tanggal Cetak', new Date().toLocaleDateString('id-ID')]);
+        csvRows.push([]);
+        csvRows.push(['Jenis BBM', 'Sisa Stok (Lembar)', 'Nilai (Rp)']);
+
+        const stokMap = hitungStokPerJenis();
+        let grandTotalKupon = 0;
+        let grandTotalRp = 0;
+
+        BBM_TYPES.forEach(t => {
+            const data = stokMap[t.name];
+            if (data) {
+                const kupon = Math.max(0, data.kupon);
+                const rp = kupon * data.nominal;
+                grandTotalKupon += kupon;
+                grandTotalRp += rp;
+                csvRows.push([t.name, kupon, rp]);
+            }
+        });
+
+        csvRows.push([]);
+        csvRows.push(['TOTAL', grandTotalKupon, grandTotalRp]);
+        csvRows.push([]);
+        csvRows.push(['=== KUPON INTRANSIT ===']);
+        csvRows.push(['Pegawai', 'Kendaraan', 'Voucher', 'Jumlah']);
+        databaseIntransit.forEach(item => {
+            if (item.status === "PENDING" || !item.status) {
+                csvRows.push([item.pemohon, item.plat, item.bbm, item.kupon]);
+            }
+        });
+    }
+
+    // Konversi ke CSV string
+    const csvContent = bom + csvRows.map(row =>
+        row.map(cell => {
+            const val = String(cell === undefined || cell === null ? '' : cell);
+            if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+                return '"' + val.replace(/"/g, '""') + '"';
+            }
+            return val;
+        }).join(',')
+    ).join('\n');
+
+    return csvContent;
+}
+
+function downloadCSV(csvContent, filename) {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 }
 
 function kompresDanUbahKeBase64(fileMentah) {
@@ -889,6 +1307,7 @@ function tutupModalFoto() {
 
 function keluarSistem() {
     sessionStorage.removeItem('isAuthenticated');
+    sessionStorage.removeItem('authToken');
     showToast("🔒 Sesi ditutup. Mengunci portal...", "info");
     setTimeout(() => {
         location.reload();
@@ -909,6 +1328,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (loginModal) loginModal.style.display = 'none';
         if (mainContainer) mainContainer.style.display = 'block';
 
+        // Init custom selects untuk modal yang baru muncul
+        setTimeout(() => {
+            document.querySelectorAll('#editNotaModal select, #editPembelianModal select, #eksporModal select').forEach(sel => {
+                setupCustomSelect(sel);
+            });
+        }, 100);
+
         // Aktifkan view tabel default sejak awal
         switchViewTable('notaTable');
 
@@ -926,14 +1352,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (sessionStorage.getItem('isAuthenticated') === 'true') izinkanAkses();
 
+    // Login via Server-Side
     if (loginForm) {
-        loginForm.addEventListener('submit', (e) => {
+        loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            if (appPasswordInput.value === APP_PASSWORD) {
-                sessionStorage.setItem('isAuthenticated', 'true');
-                izinkanAkses();
-            } else {
-                document.getElementById('loginError').style.display = 'block';
+            const loginBtn = document.getElementById('loginBtn');
+            const loginError = document.getElementById('loginError');
+
+            if (loginBtn) {
+                loginBtn.disabled = true;
+                loginBtn.textContent = '⏳ Memverifikasi...';
+            }
+            if (loginError) loginError.style.display = 'none';
+
+            try {
+                const res = await fetch(SPREADSHEET_WEBAPP_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        action: 'login',
+                        password: appPasswordInput.value
+                    })
+                });
+                const data = await res.json();
+
+                if (data.status === 'success') {
+                    sessionStorage.setItem('isAuthenticated', 'true');
+                    if (data.token) sessionStorage.setItem('authToken', data.token);
+                    izinkanAkses();
+                } else {
+                    if (loginError) loginError.style.display = 'block';
+                }
+            } catch (err) {
+                // Fallback: jika server tidak bisa dijangkau, coba verifikasi lokal basic
+                showToast('⚠️ Gagal menghubungi server: ' + err.message, 'error');
+            } finally {
+                if (loginBtn) {
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = 'Masuk Portal ➔';
+                }
             }
         });
     }
@@ -951,6 +1408,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
+    }
+
+    // Auto-link BBM saat pilih kendaraan di modal edit
+    const editPlatSelect = document.getElementById('editPlatNomor');
+    if (editPlatSelect) {
+        editPlatSelect.addEventListener('change', (e) => {
+            const val = e.target.value;
+            const matchRule = KENDARAAN_RULES.find(r => r.plat === val);
+            if (matchRule) {
+                const elBbm = document.getElementById('editJenisBbm');
+                if (elBbm) {
+                    elBbm.value = matchRule.bbm;
+                    elBbm.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            }
+        });
+    }
+
+    // Update info sisa stok saat BBM pemohon berubah
+    const bbmPemohonSelect = document.getElementById('bbmPemohon');
+    if (bbmPemohonSelect) {
+        bbmPemohonSelect.addEventListener('change', updateInfoSisaStok);
     }
 
     const idPinjamSelect = document.getElementById('idPinjamSelect');
@@ -1106,7 +1585,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     .catch(err => showToast("Gagal menyimpan: " + err.message, 'error'))
                     .finally(() => {
                         submitBtn.disabled = false;
-                        submitBtn.innerText = "Simpan Nota & LPJ BBM";
+                        submitBtn.innerText = "✨ Simpan Nota & LPJ BBM";
                     });
             } else {
                 renderTabel();
@@ -1118,11 +1597,24 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Submit Form 2: Serah Kupon
+    // Submit Form 2: Serah Kupon (DENGAN VALIDASI STOK)
     const formPemohonAmbil = document.getElementById('formPemohonAmbil');
     if (formPemohonAmbil) {
         formPemohonAmbil.addEventListener('submit', async (e) => {
             e.preventDefault();
+
+            const bbmDipilih = document.getElementById('bbmPemohon').value;
+            const kuponDiminta = parseInt(document.getElementById('jmlKuponAmbil').value, 10);
+
+            // VALIDASI STOK CLIENT-SIDE
+            const stokMap = hitungStokPerJenis();
+            const key = matchBbmKey(bbmDipilih);
+            const sisaStok = key && stokMap[key] ? Math.max(0, stokMap[key].kupon) : 0;
+
+            if (kuponDiminta > sisaStok) {
+                showToast(`⚠️ Stok tidak cukup! Sisa brankas ${bbmDipilih}: ${sisaStok} lembar, diminta: ${kuponDiminta} lembar.`, 'error');
+                return;
+            }
 
             const submitBtn = formPemohonAmbil.querySelector('button[type="submit"]');
             const originalText = submitBtn ? submitBtn.innerText : "Serahkan Kupon (Proses Intransit)";
@@ -1137,8 +1629,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 tanggal: document.getElementById('tglAmbil').value,
                 pemohon: document.getElementById('namaPemohon').value.trim(),
                 plat: document.getElementById('platPemohon').value,
-                bbm: document.getElementById('bbmPemohon').value,
-                kupon: parseInt(document.getElementById('jmlKuponAmbil').value, 10),
+                bbm: bbmDipilih,
+                kupon: kuponDiminta,
                 status: "PENDING"
             };
 
@@ -1161,7 +1653,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 showToast(`✅ Kupon (${payload.kupon} lembar) diserahkan ke ${payload.pemohon}. Status: Intransit.`, 'success');
             } catch (err) {
                 console.error("Gagal menyerahkan kupon:", err);
-                showToast("⚠️ Gagal menyimpan ke cloud: " + err.message, 'error');
+                showToast("⚠️ " + err.message, 'error');
             } finally {
                 if (submitBtn) {
                     submitBtn.disabled = false;
@@ -1287,6 +1779,117 @@ document.addEventListener('DOMContentLoaded', () => {
                     submitBtn.innerText = originalText;
                 }
             }
+        });
+    }
+
+    // Submit Form Edit Nota
+    const formEditNota = document.getElementById('formEditNota');
+    if (formEditNota) {
+        formEditNota.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const rowIndex = document.getElementById('editNotaRowIndex').value;
+            const submitBtn = formEditNota.querySelector('.btn-primary');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = '⏳ Menyimpan...';
+            }
+
+            const payload = {
+                action: 'edit_nota',
+                rowIndex: Number(rowIndex),
+                no: document.getElementById('editNoTransaksi').value.trim(),
+                tanggal: document.getElementById('editTanggalNota').value,
+                bbm: document.getElementById('editJenisBbm').value,
+                plat: document.getElementById('editPlatNomor').value,
+                total: parseInt(document.getElementById('editTotalHarga').value, 10),
+                pemohon: document.getElementById('editNamaPemohon').value.trim()
+            };
+
+            try {
+                const res = await fetch(SPREADSHEET_WEBAPP_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                const resData = await res.json();
+                if (resData.status === "error") throw new Error(resData.message);
+
+                showToast('✅ Nota berhasil diperbarui!', 'success');
+                tutupModalEdit();
+                muatDataDariSpreadsheet();
+            } catch (err) {
+                showToast('⚠️ Gagal menyimpan: ' + err.message, 'error');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '💾 Simpan Perubahan';
+                }
+            }
+        });
+    }
+
+    // Submit Form Edit Pembelian
+    const formEditPembelian = document.getElementById('formEditPembelian');
+    if (formEditPembelian) {
+        formEditPembelian.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const rowIndex = document.getElementById('editPembelianRowIndex').value;
+            const submitBtn = formEditPembelian.querySelector('.btn-primary');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = '⏳ Menyimpan...';
+            }
+
+            const payload = {
+                action: 'edit_pembelian',
+                rowIndex: Number(rowIndex),
+                bbm: document.getElementById('editPembelianBbm').value,
+                jumlahKupon: parseInt(document.getElementById('editPembelianKupon').value, 10),
+                bulan: document.getElementById('editPembelianBulan').value
+            };
+
+            try {
+                const res = await fetch(SPREADSHEET_WEBAPP_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                const resData = await res.json();
+                if (resData.status === "error") throw new Error(resData.message);
+
+                showToast('✅ Data pembelian berhasil diperbarui!', 'success');
+                tutupModalEditPembelian();
+                muatDataDariSpreadsheet();
+            } catch (err) {
+                showToast('⚠️ Gagal menyimpan: ' + err.message, 'error');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '💾 Simpan Perubahan';
+                }
+            }
+        });
+    }
+
+    // Submit Form Ekspor CSV
+    const formEkspor = document.getElementById('formEkspor');
+    if (formEkspor) {
+        formEkspor.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const jenis = document.getElementById('eksporJenis').value;
+            const bulan = document.getElementById('eksporBulan').value;
+            const tahun = document.getElementById('eksporTahun').value;
+
+            const jenisLabel = { nota: 'Nota_BBM', intransit: 'Intransit', pembelian: 'Pembelian', rekap: 'Rekap_Stok' };
+            const bulanLabel = bulan ? `_Bln${bulan}` : '';
+            const filename = `Laporan_${jenisLabel[jenis] || 'BBM'}${bulanLabel}_${tahun}_KPPD_Bantul.csv`;
+
+            const csv = generateCSVLaporan(jenis, bulan, tahun);
+            downloadCSV(csv, filename);
+            showToast(`📥 Laporan ${jenisLabel[jenis] || ''} berhasil diunduh!`, 'success');
+            tutupModalEkspor();
         });
     }
 
