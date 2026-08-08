@@ -38,6 +38,82 @@ let tempCurrentBase64 = "";
 
 let pendingDeleteAction = null;
 
+// ============================================================
+// AUTH SESSION MANAGEMENT
+// ============================================================
+function getAuthToken() {
+    return sessionStorage.getItem('bbm_auth_token') || '';
+}
+
+function setAuthToken(token) {
+    sessionStorage.setItem('bbm_auth_token', token);
+}
+
+function clearAuthToken() {
+    sessionStorage.removeItem('bbm_auth_token');
+}
+
+function isLoggedIn() {
+    return !!getAuthToken();
+}
+
+function showLoginScreen() {
+    const login = document.getElementById('loginScreen');
+    const main = document.getElementById('mainContainer');
+    if (login) login.style.display = 'flex';
+    if (main) main.style.display = 'none';
+}
+
+function showMainApp() {
+    const login = document.getElementById('loginScreen');
+    const main = document.getElementById('mainContainer');
+    if (login) login.style.display = 'none';
+    if (main) main.style.display = '';
+}
+
+function handleAuthError() {
+    clearAuthToken();
+    showLoginScreen();
+    showToast('\u26a0\ufe0f Sesi habis, silakan login kembali.', 'warning');
+}
+
+function handleLogout() {
+    clearAuthToken();
+    showLoginScreen();
+    showToast('\ud83d\udeaa Anda telah keluar dari sistem.', 'info');
+}
+
+function togglePasswordVisibility() {
+    const input = document.getElementById('loginPassword');
+    if (!input) return;
+    if (input.type === 'password') {
+        input.type = 'text';
+    } else {
+        input.type = 'password';
+    }
+}
+
+function fetchWithAuth(payload) {
+    payload.token = getAuthToken();
+    return fetch(SPREADSHEET_WEBAPP_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data && data.status === 'auth_error') {
+            handleAuthError();
+            return null;
+        }
+        return data;
+    })
+    .catch(err => {
+        console.error('Request error:', err);
+        return null;
+    });
+}
+
 const BADGE_CLASS_MAP = {
     'PERTAMAX 20.000': 'badge-pertalite',
     'PERTAMAX 100.000': 'badge-pertamax',
@@ -251,7 +327,7 @@ function hitungStokPerJenis() {
 function muatDataDariSpreadsheet() {
     if (!SPREADSHEET_WEBAPP_URL) return;
 
-    const fetchUrl = SPREADSHEET_WEBAPP_URL + "?nocache=" + new Date().getTime();
+    const fetchUrl = SPREADSHEET_WEBAPP_URL + "?nocache=" + new Date().getTime() + "&token=" + encodeURIComponent(getAuthToken());
 
     fetch(fetchUrl)
         .then(async res => {
@@ -259,6 +335,10 @@ function muatDataDariSpreadsheet() {
             return res.json();
         })
         .then(data => {
+            if (data && data.status === 'auth_error') {
+                handleAuthError();
+                return;
+            }
             if (data) {
                 databaseNota = data.nota || [];
                 databaseIntransit = data.intransit || [];
@@ -984,11 +1064,8 @@ function eksekusiHapus() {
         databaseNota.splice(index, 1);
 
         if (SPREADSHEET_WEBAPP_URL) {
-            fetch(SPREADSHEET_WEBAPP_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: 'hapus_nota', rowIndex: item.rowIndex || (index + 2) })
-            }).then(() => muatDataDariSpreadsheet());
+            fetchWithAuth({ action: 'hapus_nota', rowIndex: item.rowIndex || (index + 2) })
+                .then(() => muatDataDariSpreadsheet());
         }
 
         showToast("🗑️ Data Nota berhasil dihapus", "info");
@@ -1366,7 +1443,63 @@ document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('tanggalNota')) document.getElementById('tanggalNota').value = new Date().toISOString().split('T')[0];
     if (document.getElementById('tglAmbil')) document.getElementById('tglAmbil').value = new Date().toISOString().split('T')[0];
 
-    muatDataDariSpreadsheet();
+    // ============ LOGIN FORM HANDLER ============
+    const formLogin = document.getElementById('formLogin');
+    if (formLogin) {
+        formLogin.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const password = document.getElementById('loginPassword').value;
+            const submitBtn = document.getElementById('loginSubmitBtn');
+            const btnText = submitBtn ? submitBtn.querySelector('.login-btn-text') : null;
+            const btnLoading = submitBtn ? submitBtn.querySelector('.login-btn-loading') : null;
+            const errorDiv = document.getElementById('loginError');
+
+            if (btnText) btnText.style.display = 'none';
+            if (btnLoading) btnLoading.style.display = 'inline';
+            if (errorDiv) errorDiv.style.display = 'none';
+            if (submitBtn) submitBtn.disabled = true;
+
+            fetch(SPREADSHEET_WEBAPP_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'login', password: password })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success' && data.token) {
+                    setAuthToken(data.token);
+                    showMainApp();
+                    muatDataDariSpreadsheet();
+                    showToast('\u2705 Login berhasil! Selamat datang.', 'success');
+                } else {
+                    if (errorDiv) {
+                        errorDiv.textContent = data.message || 'Password salah!';
+                        errorDiv.style.display = 'block';
+                    }
+                }
+            })
+            .catch(err => {
+                console.error('Login error:', err);
+                if (errorDiv) {
+                    errorDiv.textContent = 'Gagal terhubung ke server. Coba lagi.';
+                    errorDiv.style.display = 'block';
+                }
+            })
+            .finally(() => {
+                if (btnText) btnText.style.display = 'inline';
+                if (btnLoading) btnLoading.style.display = 'none';
+                if (submitBtn) submitBtn.disabled = false;
+            });
+        });
+    }
+
+    // ============ SESSION CHECK ON PAGE LOAD ============
+    if (isLoggedIn()) {
+        showMainApp();
+        muatDataDariSpreadsheet();
+    } else {
+        showLoginScreen();
+    }
 
     // Form Nota Submit with Manual Voucher Sheet Support
     const formNota = document.getElementById('formNota');
@@ -1391,11 +1524,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (SPREADSHEET_WEBAPP_URL) {
-                fetch(SPREADSHEET_WEBAPP_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ action: 'simpan_nota', ...newNota })
-                }).then(() => muatDataDariSpreadsheet());
+                fetchWithAuth({ action: 'simpan_nota', ...newNota })
+                    .then(() => muatDataDariSpreadsheet());
             }
 
             formNota.reset();
@@ -1426,11 +1556,8 @@ document.addEventListener('DOMContentLoaded', () => {
             item.pemohon = document.getElementById('editNamaPemohon').value.trim();
 
             if (SPREADSHEET_WEBAPP_URL) {
-                fetch(SPREADSHEET_WEBAPP_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ action: 'edit_nota', rowIndex: item.rowIndex || (index + 2), ...item })
-                }).then(() => muatDataDariSpreadsheet());
+                fetchWithAuth({ action: 'edit_nota', rowIndex: item.rowIndex || (index + 2), ...item })
+                    .then(() => muatDataDariSpreadsheet());
             }
 
             tutupModalEdit();
@@ -1456,11 +1583,8 @@ document.addEventListener('DOMContentLoaded', () => {
             databaseIntransit.unshift(payload);
 
             if (SPREADSHEET_WEBAPP_URL) {
-                fetch(SPREADSHEET_WEBAPP_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ action: 'serah_kupon', ...payload })
-                }).then(() => muatDataDariSpreadsheet());
+                fetchWithAuth({ action: 'serah_kupon', ...payload })
+                    .then(() => muatDataDariSpreadsheet());
             }
 
             formPemohonAmbil.reset();
@@ -1492,11 +1616,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (SPREADSHEET_WEBAPP_URL) {
-                fetch(SPREADSHEET_WEBAPP_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ action: 'retur_kupon', id: idPinjam, jmlRetur, alasan })
-                }).then(() => muatDataDariSpreadsheet());
+                fetchWithAuth({ action: 'retur_kupon', id: idPinjam, jmlRetur, alasan })
+                    .then(() => muatDataDariSpreadsheet());
             }
 
             formReturKupon.reset();
@@ -1522,11 +1643,8 @@ document.addEventListener('DOMContentLoaded', () => {
             databasePembelian.unshift(payload);
 
             if (SPREADSHEET_WEBAPP_URL) {
-                fetch(SPREADSHEET_WEBAPP_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ action: 'pembelian_kupon', ...payload })
-                }).then(() => muatDataDariSpreadsheet());
+                fetchWithAuth({ action: 'pembelian_kupon', ...payload })
+                    .then(() => muatDataDariSpreadsheet());
             }
 
             formPembelianKupon.reset();
@@ -1566,11 +1684,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 databaseOpname.unshift(payload);
 
                 if (SPREADSHEET_WEBAPP_URL) {
-                    fetch(SPREADSHEET_WEBAPP_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify({ action: 'stok_opname', ...payload })
-                    });
+                    fetchWithAuth({ action: 'stok_opname', ...payload });
                 }
             });
 

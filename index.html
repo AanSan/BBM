@@ -19,6 +19,36 @@
     <!-- Container Toast Notification -->
     <div id="toastContainer" class="toast-container"></div>
 
+    <!-- Login Screen Overlay -->
+    <div id="loginScreen" class="login-overlay" style="display: flex;">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="login-logo-icon">🏛️</div>
+                <div class="login-brand">
+                    <span class="login-sub-title">PEMDA DIY — KPPD KABUPATEN BANTUL</span>
+                    <h2>Sistem Logistik Kupon BBM</h2>
+                </div>
+            </div>
+            <form id="formLogin" class="login-form">
+                <div class="login-input-group">
+                    <label for="loginPassword">🔐 Password Akses Sistem</label>
+                    <div class="login-password-wrapper">
+                        <input type="password" id="loginPassword" placeholder="Masukkan password..." required autocomplete="current-password">
+                        <button type="button" class="login-toggle-pwd" onclick="togglePasswordVisibility()">👁️</button>
+                    </div>
+                </div>
+                <div id="loginError" class="login-error-msg" style="display: none;"></div>
+                <button type="submit" class="login-submit-btn" id="loginSubmitBtn">
+                    <span class="login-btn-text">🔓 Masuk ke Sistem</span>
+                    <span class="login-btn-loading" style="display: none;">⏳ Memverifikasi...</span>
+                </button>
+            </form>
+            <div class="login-footer-text">
+                <p>🔒 Akses terbatas untuk petugas yang berwenang</p>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal Lightbox Viewer Nota -->
     <div id="photoViewerModal" class="image-modal-overlay" style="display: none;">
         <div class="image-modal-card">
@@ -187,7 +217,7 @@
     </div>
 
     <!-- Container Utama App -->
-    <div class="app-container" id="mainContainer">
+    <div class="app-container" id="mainContainer" style="display: none;">
 
         <!-- Header Banner KPPD Bantul -->
         <header class="kppd-header">
@@ -204,6 +234,9 @@
                 </button>
                 <button type="button" class="btn-header-action success" onclick="bukaModalCetakBA()" title="Cetak Berita Acara Rekonsiliasi">
                     <span>🖨️</span> <span class="action-text">Cetak BA</span>
+                </button>
+                <button type="button" class="btn-header-action danger" onclick="handleLogout()" title="Keluar dari Sistem">
+                    <span>🚪</span> <span class="action-text">Logout</span>
                 </button>
                 <div class="header-status-badge">
                     <span class="status-dot"></span> <span class="status-text">Sistem Aktif</span>
