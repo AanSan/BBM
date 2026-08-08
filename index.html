@@ -7,11 +7,10 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#0f172a">
-    <title>Sistem Kelola &amp; Rekonsiliasi Kupon BBM — KPPD Bantul</title>
+    <title>Sistem Manajemen & Rekonsiliasi Kupon BBM — KPPD DIY di Kab. Bantul</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <script src="app.js" defer></script>
 </head>
@@ -19,25 +18,6 @@
 <body>
     <!-- Container Toast Notification -->
     <div id="toastContainer" class="toast-container"></div>
-
-    <!-- Modal Login Security Guard -->
-    <div id="loginModal" class="login-modal-overlay">
-        <div class="login-modal-card">
-            <div class="login-brand">
-                <span class="brand-badge">KPPD KABUPATEN BANTUL</span>
-                <h2>Sistem Logistik BBM</h2>
-                <p>Masukkan password otorisasi untuk mengakses data persediaan kupon.</p>
-            </div>
-            <form id="loginForm">
-                <div class="form-group">
-                    <label for="appPassword">🔑 Password Akses</label>
-                    <input type="password" id="appPassword" placeholder="••••••••" required>
-                </div>
-                <div id="loginError" class="login-error-msg" style="display: none;">⚠️ Password tidak valid! Silakan coba lagi.</div>
-                <button type="submit" class="btn-primary full-width" id="loginBtn">Masuk Portal ➔</button>
-            </form>
-        </div>
-    </div>
 
     <!-- Modal Lightbox Viewer Nota -->
     <div id="photoViewerModal" class="image-modal-overlay" style="display: none;">
@@ -57,18 +37,18 @@
         <div class="edit-modal-card">
             <button class="close-modal-btn" onclick="tutupModalEdit()">&times;</button>
             <div class="modal-header">
-                <h3>✏️ Edit Data Nota</h3>
+                <h3>✏️ Edit Data Nota LPJ</h3>
             </div>
             <form id="formEditNota" class="app-form">
                 <input type="hidden" id="editNotaRowIndex">
                 <div class="form-row">
                     <div class="form-group col-6">
-                        <label for="editNoTransaksi">No. Transaksi</label>
-                        <input type="text" id="editNoTransaksi" required>
-                    </div>
-                    <div class="form-group col-6">
                         <label for="editTanggalNota">Tanggal Nota</label>
                         <input type="date" id="editTanggalNota" required>
+                    </div>
+                    <div class="form-group col-6">
+                        <label for="editNoTransaksi">No. Transaksi</label>
+                        <input type="text" id="editNoTransaksi" required>
                     </div>
                 </div>
                 <div class="form-group">
@@ -78,18 +58,22 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="editJenisBbm">⛽ Jenis BBM</label>
+                    <label for="editJenisBbm">⛽ Jenis BBM / Voucher</label>
                     <select id="editJenisBbm" required>
                         <option value="">-- Pilih Jenis BBM --</option>
                     </select>
                 </div>
                 <div class="form-row">
-                    <div class="form-group col-6">
+                    <div class="form-group col-4">
                         <label for="editTotalHarga">Total Rp Nota</label>
                         <input type="number" id="editTotalHarga" required>
                     </div>
-                    <div class="form-group col-6">
-                        <label for="editNamaPemohon">Pemohon / Driver</label>
+                    <div class="form-group col-4">
+                        <label for="editJmlKupon">Jml Voucher (Lbr)</label>
+                        <input type="number" id="editJmlKupon" min="1" required>
+                    </div>
+                    <div class="form-group col-4">
+                        <label for="editNamaPemohon">Driver / Pemohon</label>
                         <input type="text" id="editNamaPemohon">
                     </div>
                 </div>
@@ -101,57 +85,12 @@
         </div>
     </div>
 
-    <!-- Modal Edit Pembelian -->
-    <div id="editPembelianModal" class="image-modal-overlay" style="display: none;">
-        <div class="edit-modal-card">
-            <button class="close-modal-btn" onclick="tutupModalEditPembelian()">&times;</button>
-            <div class="modal-header">
-                <h3>✏️ Edit Data Pembelian</h3>
-            </div>
-            <form id="formEditPembelian" class="app-form">
-                <input type="hidden" id="editPembelianRowIndex">
-                <div class="form-group">
-                    <label for="editPembelianBbm">⛽ Jenis Voucher BBM</label>
-                    <select id="editPembelianBbm" required>
-                        <option value="">-- Pilih Jenis BBM --</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="editPembelianKupon">🎫 Jumlah Kupon (Lembar)</label>
-                    <input type="number" id="editPembelianKupon" min="1" required>
-                </div>
-                <div class="form-group">
-                    <label for="editPembelianBulan">📅 Bulan Pembelian</label>
-                    <select id="editPembelianBulan" required>
-                        <option value="">📅 -- Pilih Bulan --</option>
-                        <option value="Januari">🗓️ Januari</option>
-                        <option value="Februari">🗓️ Februari</option>
-                        <option value="Maret">🗓️ Maret</option>
-                        <option value="April">🗓️ April</option>
-                        <option value="Mei">🗓️ Mei</option>
-                        <option value="Juni">🗓️ Juni</option>
-                        <option value="Juli">🗓️ Juli</option>
-                        <option value="Agustus">🗓️ Agustus</option>
-                        <option value="September">🗓️ September</option>
-                        <option value="Oktober">🗓️ Oktober</option>
-                        <option value="November">🗓️ November</option>
-                        <option value="Desember">🗓️ Desember</option>
-                    </select>
-                </div>
-                <div class="form-row" style="gap: 10px;">
-                    <button type="submit" class="btn-primary" style="flex:1;">💾 Simpan Perubahan</button>
-                    <button type="button" class="btn-action outline" style="flex:0 0 auto;" onclick="tutupModalEditPembelian()">Batal</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <!-- Modal Konfirmasi Hapus -->
     <div id="confirmDeleteModal" class="image-modal-overlay" style="display: none;">
         <div class="confirm-modal-card">
             <div class="confirm-icon">🗑️</div>
             <h3 id="confirmDeleteTitle">Konfirmasi Hapus</h3>
-            <p id="confirmDeleteMsg">Apakah Anda yakin ingin menghapus data ini? Data akan diarsipkan dan tidak tampil di sistem.</p>
+            <p id="confirmDeleteMsg">Apakah Anda yakin ingin menghapus data ini? Data akan diarsipkan.</p>
             <div class="confirm-btn-group">
                 <button type="button" class="btn-danger" id="confirmDeleteBtn" onclick="eksekusiHapus()">🗑️ Ya, Hapus</button>
                 <button type="button" class="btn-action outline" onclick="tutupModalHapus()">Batal</button>
@@ -159,78 +98,120 @@
         </div>
     </div>
 
-    <!-- Modal Ekspor Laporan -->
-    <div id="eksporModal" class="image-modal-overlay" style="display: none;">
-        <div class="edit-modal-card">
-            <button class="close-modal-btn" onclick="tutupModalEkspor()">&times;</button>
-            <div class="modal-header">
-                <h3>📥 Ekspor Laporan Rekapitulasi</h3>
+    <!-- Modal Cetak Berita Acara Rekonsiliasi (PDF/Print View) -->
+    <div id="printBAModal" class="image-modal-overlay" style="display: none;">
+        <div class="ba-modal-card">
+            <div class="no-print modal-header-action">
+                <h3>🖨️ Cetak Berita Acara Rekonsiliasi & Opname Kupon BBM</h3>
+                <div class="ba-btn-group">
+                    <button type="button" class="btn-primary" onclick="window.print()">🖨️ Cetak / Simpan PDF</button>
+                    <button type="button" class="btn-action outline" onclick="tutupModalCetakBA()">Tutup</button>
+                </div>
             </div>
-            <form id="formEkspor" class="app-form">
-                <div class="form-group">
-                    <label for="eksporJenis">📋 Jenis Laporan</label>
-                    <select id="eksporJenis">
-                        <option value="nota">📋 Log Pengeluaran Nota BBM</option>
-                        <option value="intransit">⏳ Kupon Intransit (Belum Selesai)</option>
-                        <option value="pembelian">📦 Riwayat Pembelian Kupon</option>
-                        <option value="rekap">📊 Rekapitulasi Stok Lengkap</option>
-                    </select>
-                </div>
-                <div class="form-row">
-                    <div class="form-group col-6">
-                        <label for="eksporBulan">📅 Bulan</label>
-                        <select id="eksporBulan">
-                            <option value="">📅 Semua Bulan</option>
-                            <option value="01">Januari</option>
-                            <option value="02">Februari</option>
-                            <option value="03">Maret</option>
-                            <option value="04">April</option>
-                            <option value="05">Mei</option>
-                            <option value="06">Juni</option>
-                            <option value="07">Juli</option>
-                            <option value="08">Agustus</option>
-                            <option value="09">September</option>
-                            <option value="10">Oktober</option>
-                            <option value="11">November</option>
-                            <option value="12">Desember</option>
-                        </select>
-                    </div>
-                    <div class="form-group col-6">
-                        <label for="eksporTahun">📅 Tahun</label>
-                        <input type="number" id="eksporTahun" min="2020" max="2030" value="2026">
+
+            <!-- DOKUMEN RESMI KOP KPPD BANTUL -->
+            <div id="printableBAArea" class="ba-document">
+                <div class="kop-surat">
+                    <div class="kop-logo">🏛️</div>
+                    <div class="kop-text">
+                        <h2>PEMERINTAH DAERAH DAERAH ISTIMEWA YOGYAKARTA</h2>
+                        <h3>BADAN PENGELOLAAN KEUANGAN DAN ASET DAERAH</h3>
+                        <h1>KANTOR PELAYANAN PAJAK DAERAH (KPPD) DIY DI KABUPATEN BANTUL</h1>
+                        <p>Jl. Jend. A. Yani No. 19, Badegan, Bantul, Daerah Istimewa Yogyakarta 55711</p>
                     </div>
                 </div>
-                <button type="submit" class="btn-primary full-width">📥 Download CSV Laporan</button>
-            </form>
+                <div class="kop-line"></div>
+
+                <div class="ba-title">
+                    <h4>BERITA ACARA REKONSILIASI DAN STOK OPNAME KUPON BBM</h4>
+                    <p id="baNomorSurat">Nomor: 024 / BA-BBM / KPPD-BTL / VIII / 2026</p>
+                </div>
+
+                <div class="ba-body">
+                    <p>Pada hari ini, <strong id="baHariTanggal">Jumat, 07 Agustus 2026</strong>, telah dilakukan Rekonsiliasi Fisik dan Penyeimbangan Stok Kupon Bahan Bakar Minyak (BBM) Operasional Kendaraan Dinas pada Kantor Pelayanan Pajak Daerah (KPPD) DIY di Kabupaten Bantul dengan rincian sebagai berikut:</p>
+
+                    <table class="ba-table">
+                        <thead>
+                            <tr>
+                                <th>No</th>
+                                <th>Jenis Voucher BBM</th>
+                                <th>Nominal / Lbr</th>
+                                <th>Saldo Awal + Beli</th>
+                                <th>LPJ Terpakai</th>
+                                <th>Intransit</th>
+                                <th>Stok Fisik Opname</th>
+                                <th>Selisih</th>
+                            </tr>
+                        </thead>
+                        <tbody id="baTableBody">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+
+                    <div class="ba-summary-box">
+                        <div class="ba-summary-item">
+                            <span>Total Nilai Nominal Stok Fisik Brankas:</span>
+                            <strong id="baTotalNilaiFisik">Rp0</strong>
+                        </div>
+                        <div class="ba-summary-item">
+                            <span>Status Rekonsiliasi:</span>
+                            <strong id="baStatusStatus" style="color: #059669;">BALANCED / SESUAI</strong>
+                        </div>
+                    </div>
+
+                    <p class="ba-catatan">Catatan / Keterangan Tambahan: <span id="baCatatanText">Seluruh fisik kupon BBM di brankas telah dihitung dengan cermat dan sesuai dengan catatan pembukuan logistik operasional.</span></p>
+
+                    <div class="ba-signatures">
+                        <div class="sig-box">
+                            <p>Mengetahui,<br><strong>Kasubag Tata Usaha</strong></p>
+                            <div class="sig-space"></div>
+                            <p class="sig-name">__________________________</p>
+                            <p class="sig-nip">NIP. 19780512 200501 1 003</p>
+                        </div>
+                        <div class="sig-box">
+                            <p>Pengelola Barang / Logistik</p>
+                            <div class="sig-space"></div>
+                            <p class="sig-name"><strong>Noviyan Hogy A. S.</strong></p>
+                            <p class="sig-nip">Pengelola Aset & Persediaan</p>
+                        </div>
+                        <div class="sig-box">
+                            <p>Bendahara Pengeluaran</p>
+                            <div class="sig-space"></div>
+                            <p class="sig-name">__________________________</p>
+                            <p class="sig-nip">NIP. 19850314 201001 2 015</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- Container Utama App -->
-    <div class="app-container" id="mainContainer" style="display: none;">
+    <div class="app-container" id="mainContainer">
 
         <!-- Header Banner KPPD Bantul -->
         <header class="kppd-header">
             <div class="header-brand">
                 <div class="logo-avatar">🏛️</div>
                 <div class="brand-text">
-                    <span class="sub-title">PEMDA DIY — KPPD KAB. BANTUL</span>
+                    <span class="sub-title">PEMDA DIY — KPPD KABUPATEN BANTUL</span>
                     <h1>Sistem Logistik Kupon BBM</h1>
                 </div>
             </div>
             <div class="header-actions">
                 <button type="button" class="btn-header-action" onclick="muatDataDariSpreadsheet()" title="Sinkronkan Data Cloud">
-                    <span>🔄</span> <span class="action-text">Sync Data</span>
+                    <span>🔄</span> <span class="action-text">Sync Cloud</span>
+                </button>
+                <button type="button" class="btn-header-action success" onclick="bukaModalCetakBA()" title="Cetak Berita Acara Rekonsiliasi">
+                    <span>🖨️</span> <span class="action-text">Cetak BA</span>
                 </button>
                 <div class="header-status-badge">
                     <span class="status-dot"></span> <span class="status-text">Sistem Aktif</span>
                 </div>
-                <button type="button" class="btn-header-action danger" onclick="keluarSistem()" title="Kunci / Keluar Portal">
-                    <span>🔒</span> <span class="action-text">Keluar</span>
-                </button>
             </div>
         </header>
 
-        <!-- Dashboard Stat Cards (Horizontal Swipe Carousel di Mobile) -->
+        <!-- Dashboard Stat Cards -->
         <section class="dashboard-grid">
             <div class="stat-card card-primary">
                 <div class="stat-icon">📦</div>
@@ -253,7 +234,7 @@
             <div class="stat-card card-success">
                 <div class="stat-icon">🧾</div>
                 <div class="stat-info">
-                    <span class="stat-label">Pengeluaran Riil (Ada Nota)</span>
+                    <span class="stat-label">Pengeluaran Riil (Ada LPJ)</span>
                     <div id="summaryTotalTerpakai" class="stat-value">0 Lembar</div>
                     <span id="summaryTotalTerpakaiRp" class="stat-sub">Rp0</span>
                 </div>
@@ -265,10 +246,10 @@
             <!-- Diisi oleh JavaScript -->
         </section>
 
-        <!-- MAIN PAGE SWITCHER (STICKY TAB DI MOBILE & TABLET) -->
+        <!-- MAIN PAGE SWITCHER (STICKY TAB DI MOBILE & DESKTOP) -->
         <div class="main-page-nav">
             <button class="page-nav-btn active" id="navBtnForm" onclick="switchMainPage('formPage')">
-                📝 Input & Transaksi
+                📝 Input Transaksi
             </button>
             <button class="page-nav-btn" id="navBtnTable" onclick="switchMainPage('tablePage')">
                 📊 Data & Laporan
@@ -280,17 +261,18 @@
             <!-- PAGE 1: SIDEBAR FORM INPUT -->
             <aside class="sidebar-panel" id="formPageSection">
                 <div class="segmented-tabs">
-                    <button class="tab-btn active" id="btnTab1" onclick="switchTab('tabNota')">📝 Nota</button>
+                    <button class="tab-btn active" id="btnTab1" onclick="switchTab('tabNota')">📝 LPJ Nota</button>
                     <button class="tab-btn" id="btnTab2" onclick="switchTab('tabPemohon')">🤝 Serah</button>
                     <button class="tab-btn" id="btnTab3" onclick="switchTab('tabRetur')">↩️ Retur</button>
                     <button class="tab-btn" id="btnTab4" onclick="switchTab('tabPembelian')">🛍️ Pasokan</button>
+                    <button class="tab-btn highlight-tab" id="btnTab5" onclick="switchTab('tabOpname')">📋 Opname</button>
                 </div>
 
-                <!-- FORM 1: NOTA SPBU -->
+                <!-- FORM 1: NOTA SPBU (LPJ) -->
                 <div id="tabNota" class="panel-content active">
                     <div class="panel-title">
-                        <h3>Input Nota BBM SPBU</h3>
-                        <p>Unggah foto nota untuk mengisi data otomatis via OCR AI.</p>
+                        <h3>Input Nota BBM SPBU (LPJ)</h3>
+                        <p>Unggah foto nota SPBU & atur jumlah voucher fisik yang digunakan.</p>
                     </div>
 
                     <form id="formNota" class="app-form">
@@ -317,12 +299,12 @@
 
                         <div class="form-row">
                             <div class="form-group col-6">
-                                <label for="noTransaksi">No. Transaksi / Nota</label>
-                                <input type="text" id="noTransaksi" required placeholder="Contoh: 1128735">
-                            </div>
-                            <div class="form-group col-6">
                                 <label for="tanggalNota">Tanggal Nota</label>
                                 <input type="date" id="tanggalNota" required>
+                            </div>
+                            <div class="form-group col-6">
+                                <label for="noTransaksi">No. Transaksi / Nota</label>
+                                <input type="text" id="noTransaksi" required placeholder="Contoh: 1128735">
                             </div>
                         </div>
 
@@ -341,17 +323,21 @@
                         </div>
 
                         <div class="form-row">
-                            <div class="form-group col-6">
+                            <div class="form-group col-4">
                                 <label for="totalHarga">Total Rp Nota</label>
                                 <input type="number" id="totalHarga" required placeholder="200000">
                             </div>
-                            <div class="form-group col-6">
-                                <label for="namaPemohonNota">Pengambil / Driver</label>
+                            <div class="form-group col-4">
+                                <label for="jumlahKuponNota">🎫 Jml Voucher (Manual)</label>
+                                <input type="number" id="jumlahKuponNota" min="1" required placeholder="1">
+                            </div>
+                            <div class="form-group col-4">
+                                <label for="namaPemohonNota">Driver / Pegawai</label>
                                 <input type="text" id="namaPemohonNota" placeholder="Nama Pegawai">
                             </div>
                         </div>
 
-                        <button type="submit" class="btn-primary full-width">✨ Simpan Nota & LPJ BBM</button>
+                        <button type="submit" class="btn-primary full-width">✨ Simpan LPJ Nota BBM</button>
                     </form>
                 </div>
 
@@ -359,7 +345,7 @@
                 <div id="tabPemohon" class="panel-content" style="display: none;">
                     <div class="panel-title">
                         <h3>Penyerahan Kupon ke Pegawai</h3>
-                        <p>Catat voucher yang diserahkan sebelum dibelikan di SPBU.</p>
+                        <p>Catat voucher kertas yang diserahkan sebelum dibelikan di SPBU.</p>
                     </div>
 
                     <form id="formPemohonAmbil" class="app-form">
@@ -384,7 +370,7 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="jmlKuponAmbil">🎫 Jumlah Kupon (Lembar)</label>
+                            <label for="jmlKuponAmbil">🎫 Jumlah Kupon (Lembar Kertas)</label>
                             <input type="number" id="jmlKuponAmbil" min="1" placeholder="Contoh: 5" required>
                         </div>
                         <!-- Info Sisa Stok -->
@@ -399,7 +385,7 @@
                 <div id="tabRetur" class="panel-content" style="display: none;">
                     <div class="panel-title">
                         <h3>Pengembalian Sisa / Batal Kupon</h3>
-                        <p>Kembalikan kupon yang tidak jadi terpakai ke stok brankas.</p>
+                        <p>Kembalikan kupon kertas yang tidak jadi terpakai ke brankas.</p>
                     </div>
 
                     <form id="formReturKupon" class="app-form">
@@ -424,8 +410,8 @@
                 <!-- FORM 4: PEMBELIAN KUPON BARU -->
                 <div id="tabPembelian" class="panel-content" style="display: none;">
                     <div class="panel-title">
-                        <h3>Input Pembelian / Pasokan Kupon</h3>
-                        <p>Catat pengadaan voucher BBM baru ke dalam stok persediaan brankas.</p>
+                        <h3>Input Pasokan Kupon Baru</h3>
+                        <p>Catat pengadaan voucher BBM kertas baru ke persediaan brankas.</p>
                     </div>
 
                     <form id="formPembelianKupon" class="app-form">
@@ -436,7 +422,7 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="pembelianKupon">🎫 Jumlah Kupon (Lembar)</label>
+                            <label for="pembelianKupon">🎫 Jumlah Kupon Baru (Lembar)</label>
                             <input type="number" id="pembelianKupon" min="1" placeholder="Contoh: 50" required>
                         </div>
                         <div class="form-group">
@@ -457,7 +443,38 @@
                                 <option value="Desember">🗓️ Desember</option>
                             </select>
                         </div>
-                        <button type="submit" class="btn-primary full-width">📦 Tambah Stok Pembelian</button>
+                        <button type="submit" class="btn-primary full-width">📦 Tambah Pasokan Brankas</button>
+                    </form>
+                </div>
+
+                <!-- FORM 5: STOK OPNAME (MENU BARU) -->
+                <div id="tabOpname" class="panel-content" style="display: none;">
+                    <div class="panel-title">
+                        <h3>📋 Menu Stok Opname Fisik Kupon</h3>
+                        <p>Penghitungan fisik fisik voucher kertas brankas secara langsung & pencatatan selisih audit.</p>
+                    </div>
+
+                    <form id="formStokOpname" class="app-form">
+                        <div class="form-group">
+                            <label for="tglOpname">📅 Tanggal Opname Fisik</label>
+                            <input type="date" id="tglOpname" required>
+                        </div>
+
+                        <div class="opname-inputs-card">
+                            <label class="opname-card-title">🔍 Input Jumlah Fisik Hasil Hitung Brankas:</label>
+                            <div id="opnameInputsContainer">
+                                <!-- Populated dynamically by JS -->
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="keteranganOpname">📝 Berita Acara / Keterangan Audit</label>
+                            <input type="text" id="keteranganOpname" placeholder="Contoh: Opname Rutin Bulanan Agustus / Penyeimbangan Fisik" required>
+                        </div>
+
+                        <button type="submit" class="btn-primary full-width" style="background: linear-gradient(135deg, #0f172a 0%, #334155 100%);">
+                            📊 Simpan Hasil Stok Opname & Sesuaikan Stok
+                        </button>
                     </form>
                 </div>
             </aside>
@@ -466,23 +483,22 @@
             <main class="content-panel" id="tablePageSection">
                 <div class="view-switcher">
                     <button class="switcher-btn active" id="viewBtnNota" onclick="switchViewTable('notaTable')">
-                        📋 Log Pengeluaran Nota
+                        📋 Log Pengeluaran LPJ
                     </button>
                     <button class="switcher-btn" id="viewBtnIntransit" onclick="switchViewTable('intransitTable')">
-                        ⏳ Kupon Intransit
+                        ⏳ Intransit (Aging)
                     </button>
                     <button class="switcher-btn" id="viewBtnPembelian" onclick="switchViewTable('pembelianTable')">
-                        📦 Riwayat Pembelian
+                        📦 Riwayat Pasokan
                     </button>
-                    <button class="switcher-btn switcher-btn-export" id="viewBtnEkspor" onclick="bukaModalEkspor()">
-                        📥 Ekspor
+                    <button class="switcher-btn" id="viewBtnOpname" onclick="switchViewTable('opnameTable')">
+                        📋 Riwayat Opname
                     </button>
                 </div>
 
                 <!-- TABEL 1: NOTA SPBU TERPAKAI -->
                 <div id="notaTableSection">
                     <div class="filter-bar">
-                        <!-- Header Filter: Presets + Reset Button -->
                         <div class="filter-header-bar">
                             <div class="filter-presets">
                                 <button type="button" class="preset-btn active" id="btnPresetSemua" onclick="setQuickDateFilter('semua')">📅 Semua Data</button>
@@ -493,7 +509,6 @@
                             <button type="button" class="btn-reset-filter" onclick="resetAllFilters()">🧹 Reset Filter</button>
                         </div>
 
-                        <!-- Row Input Filters (Grid Presisi 5 Kolom) -->
                         <div class="filter-row-inputs">
                             <div class="filter-item item-date">
                                 <label>📅 Tanggal Mulai</label>
@@ -510,7 +525,7 @@
                                 </select>
                             </div>
                             <div class="filter-item item-search">
-                                <label>🔍 Cari Plat / Pemohon</label>
+                                <label>🔍 Cari Plat / Driver</label>
                                 <input type="text" id="filterKendaraan" placeholder="Ketik Plat / Nama Pegawai...">
                             </div>
                             <div class="filter-item item-sort">
@@ -533,8 +548,8 @@
                                     <th>Tanggal</th>
                                     <th>Jenis BBM</th>
                                     <th>Kendaraan Ops</th>
-                                    <th>Pemohon</th>
-                                    <th class="text-center">Voucher</th>
+                                    <th>Pegawai</th>
+                                    <th class="text-center">Voucher Kertas</th>
                                     <th class="text-right">Total Rp</th>
                                     <th class="text-center">Lampiran</th>
                                     <th class="text-center">Aksi</th>
@@ -543,17 +558,29 @@
                             <tbody id="tabelBody">
                                 <!-- Data Diisi Javascript -->
                             </tbody>
+                            <tfoot id="tabelFoot">
+                                <tr class="table-summary-row">
+                                    <td colspan="5" style="text-align:right; font-weight:800; font-size:13px; color:#1e293b;">📊 TOTAL SUMMARY FILTER:</td>
+                                    <td class="text-center" id="filterTotalKupon" style="font-weight:800; color:#312e81; font-size:14px;">0 lbr</td>
+                                    <td class="text-right" id="filterTotalRp" style="font-weight:800; color:#059669; font-size:14px;">Rp0</td>
+                                    <td colspan="2" class="text-center">
+                                        <button type="button" class="btn-scroll-top" onclick="scrollToFilterMenu()" title="Kembali Ke Menu Filter Atas">
+                                            <span>⬆️</span> <span class="btn-text">Ke Filter</span>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
                 </div>
 
-                <!-- TABEL 2: KUPON INTRANSIT -->
+                <!-- TABEL 2: KUPON INTRANSIT (DENGAN AGING ALERT & WA REMINDER) -->
                 <div id="intransitTableSection" style="display: none;">
                     <div class="info-alert-banner">
                         <span>💡</span>
                         <div>
-                            <strong>Monitoring Kupon Intransit KPPD Bantul</strong>
-                            <p>Daftar penyerahan kupon yang masih dibawa pegawai dan belum diserahkan bukti nota SPBU atau belum dikembalikan.</p>
+                            <strong>Monitoring Kupon Intransit (Pegawai Holding Audit)</strong>
+                            <p>Daftar voucher kertas yang dibawa pegawai dan belum LPJ. Lampiran >3 hari berwarna <span style="color:#d97706; font-weight:800;">Kuning</span>, dan >7 hari berwarna <span style="color:#e11d48; font-weight:800;">Merah</span>.</p>
                         </div>
                     </div>
 
@@ -562,13 +589,13 @@
                             <thead>
                                 <tr>
                                     <th>ID Ref</th>
-                                    <th>Tgl Ambil</th>
+                                    <th>Tgl Penyerahan</th>
                                     <th>Pegawai Pemohon</th>
-                                    <th>Kendaraan</th>
-                                    <th>Voucher</th>
-                                    <th class="text-center">Jumlah</th>
-                                    <th class="text-center">Masa Pegang</th>
-                                    <th class="text-center">Status</th>
+                                    <th>Kendaraan Ops</th>
+                                    <th>Voucher BBM</th>
+                                    <th class="text-center">Lembar</th>
+                                    <th class="text-center">Aging (Hari)</th>
+                                    <th class="text-center">Aksi / Pengingat</th>
                                 </tr>
                             </thead>
                             <tbody id="tabelIntransitBody">
@@ -578,16 +605,16 @@
                     </div>
                 </div>
 
-                <!-- TABEL 3: RIWAYAT PEMBELIAN KUPON -->
+                <!-- TABEL 3: RIWAYAT PASOKAN -->
                 <div id="pembelianTableSection" style="display: none;">
                     <div class="table-container">
                         <table class="modern-table">
                             <thead>
                                 <tr>
-                                    <th>Bulan</th>
-                                    <th>Nama Barang / Voucher</th>
-                                    <th class="text-center">Jumlah Kupon</th>
-                                    <th class="text-right">Nominal Per Kupon</th>
+                                    <th>Periode Bulan</th>
+                                    <th>Nama Jenis Voucher</th>
+                                    <th class="text-center">Jumlah Voucher (Lbr)</th>
+                                    <th class="text-right">Nominal / Lbr</th>
                                     <th class="text-right">Total Anggaran (Rp)</th>
                                     <th class="text-center">Aksi</th>
                                 </tr>
@@ -598,11 +625,39 @@
                         </table>
                     </div>
                 </div>
+
+                <!-- TABEL 4: RIWAYAT STOK OPNAME -->
+                <div id="opnameTableSection" style="display: none;">
+                    <div class="info-alert-banner" style="background: #f1f5f9; color: #334155;">
+                        <span>📜</span>
+                        <div>
+                            <strong>Log Riwayat Stok Opname Fisik Brankas</strong>
+                            <p>Catatan histori hasil audit fisik kupon kertas yang pernah dilaksanakan di KPPD Bantul.</p>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="modern-table">
+                            <thead>
+                                <tr>
+                                    <th>Tanggal Audit</th>
+                                    <th>Keterangan / Berita Acara</th>
+                                    <th>Jenis BBM</th>
+                                    <th class="text-center">Stok Sistem</th>
+                                    <th class="text-center">Hitung Fisik</th>
+                                    <th class="text-center">Selisih (Lbr)</th>
+                                    <th class="text-right">Nilai Selisih (Rp)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelOpnameBody">
+                                <!-- Data Diisi Javascript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </main>
         </div>
     </div>
-
-
 </body>
 
 </html>
