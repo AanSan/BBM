@@ -3,11 +3,31 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="Sistem Logistik Kupon BBM Operasional KPPD DIY di Kabupaten Bantul — Pengelolaan LPJ Nota SPBU, Rekonsiliasi Intransit, Pasokan, dan Stok Opname Kupon BBM.">
+    <meta name="robots" content="noindex, nofollow">
     <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#0f172a">
+    
+    <!-- Open Graph / WhatsApp Social Sharing Tags -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Sistem Logistik Kupon BBM — KPPD DIY Kab. Bantul">
+    <meta property="og:description" content="Sistem Manajemen & Rekonsiliasi Logistik Kupon BBM Operasional Kendaraan Dinas KPPD DIY di Kabupaten Bantul.">
+    <meta property="og:site_name" content="KPPD DIY di Kab. Bantul">
+    
+    <!-- Twitter Card Meta -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Sistem Logistik Kupon BBM — KPPD DIY Kab. Bantul">
+    <meta name="twitter:description" content="Sistem Manajemen & Rekonsiliasi Logistik Kupon BBM Operasional Kendaraan Dinas KPPD DIY di Kabupaten Bantul.">
+
     <title>Sistem Manajemen & Rekonsiliasi Kupon BBM — KPPD DIY di Kab. Bantul</title>
+    
+    <!-- Favicon Inline Data URI (Pemda Icon) -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏛️</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏛️</text></svg>">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -34,7 +54,7 @@
                     <label for="loginPassword">🔐 Password Akses Sistem</label>
                     <div class="login-password-wrapper">
                         <input type="password" id="loginPassword" placeholder="Masukkan password..." required autocomplete="current-password">
-                        <button type="button" class="login-toggle-pwd" onclick="togglePasswordVisibility()">👁️</button>
+                        <button type="button" class="login-toggle-pwd" onclick="togglePasswordVisibility()" aria-label="Tampilkan atau sembunyikan password">👁️</button>
                     </div>
                 </div>
                 <div id="loginError" class="login-error-msg" style="display: none;"></div>
@@ -50,9 +70,9 @@
     </div>
 
     <!-- Modal Lightbox Viewer Nota -->
-    <div id="photoViewerModal" class="image-modal-overlay" style="display: none;">
+    <div id="photoViewerModal" class="image-modal-overlay" style="display: none;" role="dialog" aria-labelledby="modalPhotoTitle" aria-modal="true">
         <div class="image-modal-card">
-            <button class="close-modal-btn" onclick="tutupModalFoto()">&times;</button>
+            <button class="close-modal-btn" onclick="tutupModalFoto()" aria-label="Tutup modal pratinjau foto">&times;</button>
             <div class="modal-header">
                 <h3 id="modalPhotoTitle">Detail Bukti Nota SPBU</h3>
             </div>
@@ -63,9 +83,9 @@
     </div>
 
     <!-- Modal Edit Nota -->
-    <div id="editNotaModal" class="image-modal-overlay" style="display: none;">
+    <div id="editNotaModal" class="image-modal-overlay" style="display: none;" role="dialog" aria-modal="true">
         <div class="edit-modal-card">
-            <button class="close-modal-btn" onclick="tutupModalEdit()">&times;</button>
+            <button class="close-modal-btn" onclick="tutupModalEdit()" aria-label="Tutup modal edit nota">&times;</button>
             <div class="modal-header">
                 <h3>✏️ Edit Data Nota LPJ</h3>
             </div>
@@ -280,14 +300,14 @@
         </section>
 
         <!-- MAIN PAGE SWITCHER (STICKY TAB DI MOBILE & DESKTOP) -->
-        <div class="main-page-nav">
-            <button class="page-nav-btn active" id="navBtnForm" onclick="switchMainPage('formPage')">
+        <nav class="main-page-nav" role="tablist" aria-label="Navigasi Halaman Utama Mobile">
+            <button class="page-nav-btn active" id="navBtnForm" role="tab" aria-selected="true" aria-controls="formPageSection" onclick="switchMainPage('formPage')">
                 📝 Input Transaksi
             </button>
-            <button class="page-nav-btn" id="navBtnTable" onclick="switchMainPage('tablePage')">
+            <button class="page-nav-btn" id="navBtnTable" role="tab" aria-selected="false" aria-controls="tablePageSection" onclick="switchMainPage('tablePage')">
                 📊 Data & Laporan
             </button>
-        </div>
+        </nav>
 
         <div class="main-layout">
 

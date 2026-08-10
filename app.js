@@ -1144,7 +1144,60 @@ function scrollToFilterMenu() {
 }
 
 // ============================================================
-// UPLOAD FOTO & PREVIEW SCANNER
+// CLIENT-SIDE IMAGE COMPRESSION & OPTIMIZATION (MOBILE PERFORMA)
+// ============================================================
+function compressImageFile(file, maxWidth = 1280, maxHeight = 1280, quality = 0.78) {
+    return new Promise((resolve, reject) => {
+        if (!file || !file.type || !file.type.startsWith('image/')) {
+            reject(new Error("File bukan gambar valid"));
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            const img = new Image();
+            img.onload = () => {
+                let width = img.width;
+                let height = img.height;
+
+                if (width > maxWidth || height > maxHeight) {
+                    if (width / height > maxWidth / maxHeight) {
+                        height = Math.round((height * maxWidth) / width);
+                        width = maxWidth;
+                    } else {
+                        width = Math.round((width * maxHeight) / height);
+                        height = maxHeight;
+                    }
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+                resolve(compressedBase64);
+            };
+            img.onerror = (err) => reject(err);
+            img.src = evt.target.result;
+        };
+        reader.onerror = (err) => reject(err);
+        reader.readAsDataURL(file);
+    });
+}
+
+function debounce(func, wait = 250) {
+    let timeout;
+    return function (...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+}
+
+// ============================================================
+// UPLOAD FOTO & PREVIEW SCANNER (DENGAN KOMPRESI CLIENT-SIDE)
 // ============================================================
 function setupPhotoUploadListeners() {
     const inputs = [document.getElementById('fileNota'), document.getElementById('fileNotaKamera')];
@@ -1152,7 +1205,7 @@ function setupPhotoUploadListeners() {
 
     inputs.forEach(input => {
         if (!input) return;
-        input.addEventListener('change', (e) => {
+        input.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
 
@@ -1162,17 +1215,29 @@ function setupPhotoUploadListeners() {
                 scanStatus.innerHTML = '<span>⏳</span> Membaca & Mengompres Foto Nota...';
             }
 
-            const reader = new FileReader();
-            reader.onload = (evt) => {
-                tempCurrentBase64 = evt.target.result;
+            try {
+                const compressedBase64 = await compressImageFile(file, 1280, 1280, 0.78);
+                tempCurrentBase64 = compressedBase64;
                 if (scanStatus) {
                     scanStatus.className = 'scan-status-alert success';
-                    scanStatus.innerHTML = '<span>✅</span> Foto Nota SPBU Terlampir!';
+                    scanStatus.innerHTML = '<span>✅</span> Foto Nota SPBU Terlampir (Dikompresi)!';
                     setTimeout(() => scanStatus.style.display = 'none', 3000);
                 }
-                showToast("📸 Foto nota berhasil diunggah", "success");
-            };
-            reader.readAsDataURL(file);
+                showToast("📸 Foto nota berhasil diunggah & dikompresi", "success");
+            } catch (err) {
+                console.error("Gagal mengompres foto, menggunakan fallback:", err);
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    tempCurrentBase64 = evt.target.result;
+                    if (scanStatus) {
+                        scanStatus.className = 'scan-status-alert success';
+                        scanStatus.innerHTML = '<span>✅</span> Foto Nota SPBU Terlampir!';
+                        setTimeout(() => scanStatus.style.display = 'none', 3000);
+                    }
+                    showToast("📸 Foto nota berhasil diunggah", "success");
+                };
+                reader.readAsDataURL(file);
+            }
         });
     });
 }
@@ -1225,7 +1290,7 @@ function setupInteractiveHelpers() {
 }
 
 // ============================================================
-// REALTIME TABLE FILTERS LISTENERS
+// REALTIME TABLE FILTERS LISTENERS (DEBOUNCED FOR PERFORMANCE)
 // ============================================================
 function setupTableFilterListeners() {
     const filterElements = [
@@ -1236,9 +1301,11 @@ function setupTableFilterListeners() {
         document.getElementById('sortBy')
     ];
 
+    const debouncedRender = debounce(() => renderTabel(), 250);
+
     filterElements.forEach(el => {
         if (!el) return;
-        el.addEventListener('input', () => renderTabel());
+        el.addEventListener('input', debouncedRender);
         el.addEventListener('change', () => renderTabel());
     });
 }
