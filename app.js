@@ -38,6 +38,15 @@ let tempCurrentBase64 = "";
 
 let pendingDeleteAction = null;
 
+// === HELPER: Local date string (fix timezone bug dengan toISOString yang return UTC) ===
+function getLocalDateYMD(date) {
+    var d = date || new Date();
+    var year = d.getFullYear();
+    var month = String(d.getMonth() + 1).padStart(2, '0');
+    var day = String(d.getDate()).padStart(2, '0');
+    return year + '-' + month + '-' + day;
+}
+
 // ============================================================
 // AUTH SESSION MANAGEMENT
 // ============================================================
@@ -81,6 +90,86 @@ function handleLogout() {
     clearAuthToken();
     showLoginScreen();
     showToast('\ud83d\udeaa Anda telah keluar dari sistem.', 'info');
+}
+
+// ============================================================
+// PWA & WEB NOTIFICATION SYSTEM HELPER
+// ============================================================
+function registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(reg => {
+                    console.log('[PWA] Service Worker terdaftar:', reg.scope);
+                })
+                .catch(err => {
+                    console.warn('[PWA] Service Worker gagal:', err);
+                });
+        });
+    }
+}
+
+function periksaStatusNotifikasi() {
+    const btnText = document.getElementById('notifStatusText');
+    const btn = document.getElementById('btnEnableNotif');
+    if (!('Notification' in window)) {
+        if (btnText) btnText.textContent = 'Tanpa Notif';
+        if (btn) btn.style.display = 'none';
+        return;
+    }
+    if (Notification.permission === 'granted') {
+        if (btnText) btnText.textContent = 'Notif Aktif';
+        if (btn) {
+            btn.classList.remove('warning');
+            btn.classList.add('success');
+        }
+    } else if (Notification.permission === 'denied') {
+        if (btnText) btnText.textContent = 'Notif Ditolak';
+    } else {
+        if (btnText) btnText.textContent = 'Notif HP';
+    }
+}
+
+function mintaIzinNotifikasi() {
+    if (!('Notification' in window)) {
+        showToast("⚠️ Browser Anda tidak mendukung Web Notification.", "warning");
+        return;
+    }
+    if (Notification.permission === 'granted') {
+        showToast("✅ Notifikasi sistem sudah aktif di HP Anda.", "info");
+        kirimNotifikasiSistem("🏛️ Notifikasi BBM KPPD Bantul", "Notifikasi sistem logistik aktif di HP Anda.");
+        return;
+    }
+    Notification.requestPermission().then(permission => {
+        periksaStatusNotifikasi();
+        if (permission === 'granted') {
+            showToast("✅ Izin Notifikasi diberikan!", "success");
+            kirimNotifikasiSistem("🏛️ Notifikasi BBM KPPD Bantul", "Selamat! Notifikasi sistem logistik aktif di HP Anda.");
+        } else {
+            showToast("⚠️ Izin notifikasi ditolak oleh pengguna.", "warning");
+        }
+    });
+}
+
+function kirimNotifikasiSistem(title, body, tag = 'bbm-general') {
+    if (!('Notification' in window) || Notification.permission !== 'granted') {
+        return;
+    }
+    const options = {
+        body: body,
+        icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f172a'/><text y='.9em' x='10' font-size='80'>🏛️</text></svg>",
+        badge: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f172a'/><text y='.9em' x='10' font-size='80'>🏛️</text></svg>",
+        tag: tag,
+        renotify: true
+    };
+
+    if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+        navigator.serviceWorker.ready.then(reg => {
+            reg.showNotification(title, options);
+        });
+    } else {
+        new Notification(title, options);
+    }
 }
 
 function togglePasswordVisibility() {
@@ -689,6 +778,36 @@ function hitungDanRenderSummary() {
         document.getElementById('summaryTotalTerpakaiRp').innerText = `Rp${totalTerpakaiRp.toLocaleString('id-ID')}`;
     }
 
+    // Trigger Notifikasi Sistem untuk Stok Brankas Kritis (< 10 lembar)
+    BBM_TYPES.forEach(t => {
+        const data = stokMap[t.name];
+        if (data && data.kupon < 10) {
+            kirimNotifikasiSistem(
+                `🚨 Alert Stok BBM Kritis!`,
+                `Fisik voucher ${t.name} di brankas tersisa ${data.kupon} lembar!`,
+                `stok-kritis-${t.name}`
+            );
+        }
+    });
+
+    // Trigger Notifikasi Sistem untuk Kupon Intransit Macet (> 3 hari)
+    let intransitMacetCount = 0;
+    const todayNotif = new Date();
+    databaseIntransit.forEach(item => {
+        if (item.status === "PENDING" || !item.status) {
+            const tgl = new Date(item.tanggal);
+            const diff = Math.ceil(Math.abs(todayNotif - tgl) / (1000 * 60 * 60 * 24));
+            if (diff > 3) intransitMacetCount++;
+        }
+    });
+    if (intransitMacetCount > 0) {
+        kirimNotifikasiSistem(
+            `⏳ Alert Kupon Intransit Macet!`,
+            `Terdapat ${intransitMacetCount} permohonan kupon yang belum LPJ > 3 hari.`,
+            `intransit-aging-alert`
+        );
+    }
+
     renderBreakdownStok();
 }
 
@@ -831,9 +950,9 @@ function renderTabel() {
         return 0;
     });
 
-    tbody.innerHTML = '';
     let totalNominalFilter = 0;
     let totalKuponFilter = 0;
+    let htmlAccumulator = '';
 
     filteredData.forEach((item) => {
         const nominal = Number(item.total) || 0;
@@ -861,7 +980,7 @@ function renderTabel() {
             </div>
         `;
 
-        tbody.innerHTML += `
+        htmlAccumulator += `
             <tr>
                 <td style="font-family:monospace; font-weight:700;">${escapeHTML(item.no || '-')}</td>
                 <td>${escapeHTML(formatTanggalIndo(item.tanggal))}</td>
@@ -875,6 +994,7 @@ function renderTabel() {
             </tr>
         `;
     });
+    tbody.innerHTML = htmlAccumulator;
 
     if (filteredData.length === 0) {
         tbody.innerHTML = `<tr><td colspan="9" class="text-center" style="color:#64748b; padding:24px;">Tidak ada data log pengeluaran LPJ.</td></tr>`;
@@ -890,8 +1010,8 @@ function renderTabelIntransit() {
     const tbody = document.getElementById('tabelIntransitBody');
     if (!tbody) return;
 
-    tbody.innerHTML = '';
     const today = new Date();
+    let htmlAccumulator = '';
 
     databaseIntransit.forEach(item => {
         if (item.status === "PENDING" || !item.status) {
@@ -909,7 +1029,7 @@ function renderTabelIntransit() {
             const waText = encodeURIComponent(`Halo Mas ${item.pemohon}, mengingatkan permohonan kupon BBM ${item.kupon} lembar ${cleanBbmDisplay(item.bbm)} (${item.plat}) tanggal ${formatTanggalIndo(item.tanggal)} belum diserahkan LPJ Nota SPBU nya. Mohon bantuannya untuk segera di-LPJ kan. Terima kasih! - Logistik KPPD Bantul`);
             const waLink = `https://wa.me/?text=${waText}`;
 
-            tbody.innerHTML += `
+            htmlAccumulator += `
                 <tr>
                     <td style="font-family:monospace; font-weight:700;">${escapeHTML(item.id || 'REQ')}</td>
                     <td>${escapeHTML(formatTanggalIndo(item.tanggal))}</td>
@@ -925,8 +1045,9 @@ function renderTabelIntransit() {
             `;
         }
     });
+    tbody.innerHTML = htmlAccumulator;
 
-    if (tbody.innerHTML === '') {
+    if (htmlAccumulator === '') {
         tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="color:#64748b; padding:24px;">Tidak ada kupon intransit pending.</td></tr>`;
     }
 }
@@ -935,14 +1056,14 @@ function renderTabelPembelian() {
     const tbody = document.getElementById('tabelPembelianBody');
     if (!tbody) return;
 
-    tbody.innerHTML = '';
+    let htmlAccumulator = '';
     databasePembelian.forEach(item => {
         const jmlKupon = Number(item.kupon) || 0;
         const nomPerKupon = getNominalPerKupon(item.barang);
         const totalRp = jmlKupon * nomPerKupon;
         const badgeClass = BADGE_CLASS_MAP[item.barang] || 'badge-default';
 
-        tbody.innerHTML += `
+        htmlAccumulator += `
             <tr>
                 <td><strong>${escapeHTML(item.bulan || '-')}</strong></td>
                 <td><span class="badge ${badgeClass}">${escapeHTML(cleanBbmDisplay(item.barang || '-'))}</span></td>
@@ -953,13 +1074,14 @@ function renderTabelPembelian() {
             </tr>
         `;
     });
+    tbody.innerHTML = htmlAccumulator;
 }
 
 function renderTabelOpname() {
     const tbody = document.getElementById('tabelOpnameBody');
     if (!tbody) return;
 
-    tbody.innerHTML = '';
+    let htmlAccumulator = '';
     databaseOpname.forEach(item => {
         const selisih = Number(item.selisih) || 0;
         const nom = getNominalPerKupon(item.bbm);
@@ -969,7 +1091,7 @@ function renderTabelOpname() {
         if (selisih > 0) selisihText = `<span style="color:#2563eb; font-weight:800;">+${selisih} lbr (Surplus)</span>`;
         if (selisih < 0) selisihText = `<span style="color:#e11d48; font-weight:800;">${selisih} lbr (Defisit)</span>`;
 
-        tbody.innerHTML += `
+        htmlAccumulator += `
             <tr>
                 <td>${escapeHTML(formatTanggalIndo(item.tanggal))}</td>
                 <td><strong>${escapeHTML(item.keterangan || 'Opname Fisik')}</strong></td>
@@ -981,6 +1103,7 @@ function renderTabelOpname() {
             </tr>
         `;
     });
+    tbody.innerHTML = htmlAccumulator;
 
     if (databaseOpname.length === 0) {
         tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="color:#64748b; padding:24px;">Belum ada riwayat stok opname fisik.</td></tr>`;
@@ -1086,7 +1209,7 @@ function setQuickDateFilter(preset) {
     document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
 
     const today = new Date();
-    const formatYMD = (d) => d.toISOString().split('T')[0];
+    const formatYMD = (d) => getLocalDateYMD(d);
 
     if (preset === 'semua') {
         tglMulai.value = '';
@@ -1319,7 +1442,7 @@ function bukaModalCetakBA() {
     if (!modal || !tbody) return;
 
     const stokMap = hitungStokPerJenis();
-    tbody.innerHTML = '';
+    let htmlAccumulator = '';
 
     let grandFisikRp = 0;
     const today = new Date();
@@ -1337,7 +1460,7 @@ function bukaModalCetakBA() {
         const totalFisikRp = kuponFisik * t.nominalKupon;
         grandFisikRp += totalFisikRp;
 
-        tbody.innerHTML += `
+        htmlAccumulator += `
             <tr>
                 <td style="text-align:center;">${i + 1}</td>
                 <td>${escapeHTML(t.name)}</td>
@@ -1350,6 +1473,7 @@ function bukaModalCetakBA() {
             </tr>
         `;
     });
+    tbody.innerHTML = htmlAccumulator;
 
     const baTotalNilaiFisik = document.getElementById('baTotalNilaiFisik');
     if (baTotalNilaiFisik) baTotalNilaiFisik.textContent = `Rp${grandFisikRp.toLocaleString('id-ID')}`;
@@ -1440,7 +1564,7 @@ function renderCustomDatePicker(inputId) {
         }
 
         const selectedVal = inputEl.value;
-        const todayStr = new Date().toISOString().split('T')[0];
+        const todayStr = getLocalDateYMD();
 
         for (let day = 1; day <= lastDateOfMonth; day++) {
             const mStr = String(month + 1).padStart(2, '0');
@@ -1478,7 +1602,7 @@ function renderCustomDatePicker(inputId) {
 
         popover.querySelector('.datepicker-today-btn').onclick = (e) => {
             e.stopPropagation();
-            const todayYMD = new Date().toISOString().split('T')[0];
+            const todayYMD = getLocalDateYMD();
             inputEl.value = todayYMD;
             inputEl.dispatchEvent(new Event('change', { bubbles: true }));
             inputEl.dispatchEvent(new Event('input', { bubbles: true }));
@@ -1500,15 +1624,17 @@ function renderCustomDatePicker(inputId) {
 
 // DOM LOADED & EVENT HANDLERS
 document.addEventListener('DOMContentLoaded', () => {
+    registerServiceWorker();
+    periksaStatusNotifikasi();
     populateVehicleAndBbmDropdowns();
     setupPhotoUploadListeners();
     setupInteractiveHelpers();
     setupTableFilterListeners();
     applyCustomDatePickerToAll();
 
-    if (document.getElementById('tglOpname')) document.getElementById('tglOpname').value = new Date().toISOString().split('T')[0];
-    if (document.getElementById('tanggalNota')) document.getElementById('tanggalNota').value = new Date().toISOString().split('T')[0];
-    if (document.getElementById('tglAmbil')) document.getElementById('tglAmbil').value = new Date().toISOString().split('T')[0];
+    if (document.getElementById('tglOpname')) document.getElementById('tglOpname').value = getLocalDateYMD();
+    if (document.getElementById('tanggalNota')) document.getElementById('tanggalNota').value = getLocalDateYMD();
+    if (document.getElementById('tglAmbil')) document.getElementById('tglAmbil').value = getLocalDateYMD();
 
     // ============ LOGIN FORM HANDLER ============
     const formLogin = document.getElementById('formLogin');
@@ -1592,12 +1718,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (SPREADSHEET_WEBAPP_URL) {
                 fetchWithAuth({ action: 'simpan_nota', ...newNota })
-                    .then(() => muatDataDariSpreadsheet());
+                    .then(() => muatDataDariSpreadsheet())
+                    .catch(() => {
+                        // Rollback: hapus entry yang gagal disimpan
+                        const idx = databaseNota.indexOf(newNota);
+                        if (idx !== -1) databaseNota.splice(idx, 1);
+                        renderTabel();
+                        hitungDanRenderSummary();
+                        showToast('⚠️ Gagal simpan ke server, data lokal di-rollback.', 'warning');
+                    });
             }
 
             formNota.reset();
             tempCurrentBase64 = "";
-            document.getElementById('tanggalNota').value = new Date().toISOString().split('T')[0];
+            document.getElementById('tanggalNota').value = getLocalDateYMD();
             renderTabel();
             populateDropdownIntransit();
             hitungDanRenderSummary();
@@ -1651,11 +1785,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (SPREADSHEET_WEBAPP_URL) {
                 fetchWithAuth({ action: 'serah_kupon', ...payload })
-                    .then(() => muatDataDariSpreadsheet());
+                    .then(() => muatDataDariSpreadsheet())
+                    .catch(() => {
+                        const idx = databaseIntransit.indexOf(payload);
+                        if (idx !== -1) databaseIntransit.splice(idx, 1);
+                        renderTabelIntransit();
+                        hitungDanRenderSummary();
+                        showToast('⚠️ Gagal simpan ke server, data lokal di-rollback.', 'warning');
+                    });
             }
 
             formPemohonAmbil.reset();
-            document.getElementById('tglAmbil').value = new Date().toISOString().split('T')[0];
+            document.getElementById('tglAmbil').value = getLocalDateYMD();
             populateDropdownIntransit();
             renderTabelIntransit();
             hitungDanRenderSummary();
@@ -1711,7 +1852,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (SPREADSHEET_WEBAPP_URL) {
                 fetchWithAuth({ action: 'pembelian_kupon', ...payload })
-                    .then(() => muatDataDariSpreadsheet());
+                    .then(() => muatDataDariSpreadsheet())
+                    .catch(() => {
+                        const idx = databasePembelian.indexOf(payload);
+                        if (idx !== -1) databasePembelian.splice(idx, 1);
+                        renderTabelPembelian();
+                        hitungDanRenderSummary();
+                        showToast('⚠️ Gagal simpan ke server, data lokal di-rollback.', 'warning');
+                    });
             }
 
             formPembelianKupon.reset();

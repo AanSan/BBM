@@ -173,6 +173,16 @@ body {
     background: rgba(16, 185, 129, 0.4);
 }
 
+.btn-header-action.warning {
+    background: rgba(217, 119, 6, 0.25);
+    border-color: rgba(245, 158, 11, 0.4);
+    color: #fef3c7;
+}
+
+.btn-header-action.warning:hover {
+    background: rgba(217, 119, 6, 0.45);
+}
+
 .header-status-badge {
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -1391,6 +1401,16 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     body * {
         visibility: hidden;
     }
+    /* Pastikan parent modal containers visible & displayed saat print */
+    .ba-modal-card,
+    .image-modal-overlay {
+        display: block !important;
+        visibility: visible !important;
+        position: static !important;
+        overflow: visible !important;
+        background: none !important;
+        box-shadow: none !important;
+    }
     #printableBAArea, #printableBAArea * {
         visibility: visible;
     }
@@ -1407,16 +1427,9 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 }
 
 /* MOBILE RESPONSIVE */
-.main-page-nav { display: none; background: #e2e8f0; padding: 4px; border-radius: 16px; margin-bottom: 16px; gap: 4px; }
-.page-nav-btn { flex: 1; min-height: 40px; padding: 8px; border: none; background: transparent; font-size: 12.5px; font-weight: 800; color: var(--text-muted); border-radius: 12px; cursor: pointer; }
-.page-nav-btn.active { background: #ffffff; color: var(--primary-indigo); }
+/* Duplicate .main-page-nav, .page-nav-btn rules removed — defined at L294, L311, L330 */
 
-@media (max-width: 992px) {
-    .main-page-nav { display: flex; }
-    .main-layout { grid-template-columns: 1fr; }
-    #tablePageSection { display: none; }
-    #formPageSection { display: block; }
-}
+/* @media (max-width: 992px) rules merged to L1748 */
 
 /* CUSTOM SEARCHABLE DROPDOWN PICKER UI */
 .custom-select-wrapper {
@@ -1742,6 +1755,14 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 
     .main-page-nav {
         display: flex;
+    }
+
+    #tablePageSection {
+        display: none;
+    }
+
+    #formPageSection {
+        display: block;
     }
 }
 

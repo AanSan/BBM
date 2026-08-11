@@ -28,6 +28,9 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏛️</text></svg>">
     <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏛️</text></svg>">
 
+    <!-- Web App Manifest (PWA Standalone) -->
+    <link rel="manifest" href="manifest.json">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -251,6 +254,9 @@
             <div class="header-actions">
                 <button type="button" class="btn-header-action" onclick="muatDataDariSpreadsheet()" title="Sinkronkan Data Cloud">
                     <span>🔄</span> <span class="action-text">Sync Cloud</span>
+                </button>
+                <button type="button" class="btn-header-action warning" id="btnEnableNotif" onclick="mintaIzinNotifikasi()" title="Aktifkan Notifikasi System HP">
+                    <span>🔔</span> <span class="action-text" id="notifStatusText">Notif HP</span>
                 </button>
                 <button type="button" class="btn-header-action success" onclick="bukaModalCetakBA()" title="Cetak Berita Acara Rekonsiliasi">
                     <span>🖨️</span> <span class="action-text">Cetak BA</span>
