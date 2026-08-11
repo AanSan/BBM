@@ -413,8 +413,35 @@ function hitungStokPerJenis() {
     return stokMap;
 }
 
+function getSkeletonRowsHtml(cols = 8, count = 4) {
+    let rowsHtml = '';
+    for (let r = 0; r < count; r++) {
+        let colsHtml = '';
+        for (let c = 0; c < cols; c++) {
+            const widthStyle = c === 0 ? 'width: 70px;' : (c === 1 ? 'width: 100px;' : (c === cols - 1 ? 'width: 50px; margin: 0 auto;' : 'width: 80px;'));
+            colsHtml += `<td><div class="skeleton-shimmer" style="height: 16px; border-radius: 6px; ${widthStyle}"></div></td>`;
+        }
+        rowsHtml += `<tr class="skeleton-row">${colsHtml}</tr>`;
+    }
+    return rowsHtml;
+}
+
+function tampilkanSkeletonLoading() {
+    const tbodyNota = document.getElementById('tabelBody');
+    const tbodyIntransit = document.getElementById('tabelIntransitBody');
+    const tbodyPembelian = document.getElementById('tabelPembelianBody');
+    const tbodyOpname = document.getElementById('tabelOpnameBody');
+
+    if (tbodyNota) tbodyNota.innerHTML = getSkeletonRowsHtml(9, 4);
+    if (tbodyIntransit) tbodyIntransit.innerHTML = getSkeletonRowsHtml(8, 4);
+    if (tbodyPembelian) tbodyPembelian.innerHTML = getSkeletonRowsHtml(6, 4);
+    if (tbodyOpname) tbodyOpname.innerHTML = getSkeletonRowsHtml(7, 4);
+}
+
 function muatDataDariSpreadsheet() {
     if (!SPREADSHEET_WEBAPP_URL) return;
+
+    tampilkanSkeletonLoading();
 
     const fetchUrl = SPREADSHEET_WEBAPP_URL + "?nocache=" + new Date().getTime() + "&token=" + encodeURIComponent(getAuthToken());
 
@@ -997,7 +1024,14 @@ function renderTabel() {
     tbody.innerHTML = htmlAccumulator;
 
     if (filteredData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" class="text-center" style="color:#64748b; padding:24px;">Tidak ada data log pengeluaran LPJ.</td></tr>`;
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="9" style="text-align: center; padding: 36px 16px; color: #64748b;">
+                    <div style="font-size: 32px; margin-bottom: 6px;">📭</div>
+                    <div style="font-weight: 800; font-size: 13.5px; color: #334155;">Belum Ada Data Log Pengeluaran LPJ</div>
+                    <div style="font-size: 12px; color: #94a3b8; margin-top: 2px;">Data transaksi belum dimuat atau tidak cocok dengan filter.</div>
+                </td>
+            </tr>`;
     }
 
     const filterTotalKupon = document.getElementById('filterTotalKupon');
