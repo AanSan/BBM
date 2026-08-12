@@ -24,9 +24,10 @@
 
     <title>Sistem Manajemen & Rekonsiliasi Kupon BBM — KPPD DIY di Kab. Bantul</title>
     
-    <!-- Favicon Inline Data URI (Pemda Icon) -->
+    <!-- Favicon Inline Data URI & Apple Touch Icon -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏛️</text></svg>">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏛️</text></svg>">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <meta name="apple-mobile-web-app-title" content="BBM KPPD">
 
     <!-- Web App Manifest (PWA Standalone) -->
     <link rel="manifest" href="manifest.json">
@@ -306,8 +307,8 @@
                 <button type="button" class="text-rose-300 border border-rose-600/30 bg-transparent px-3.5 py-1.5 rounded-full text-xs font-bold cursor-pointer inline-flex items-center gap-1.5 backdrop-blur-md transition-all duration-200 hover:bg-rose-600/15 hover:text-rose-400 hover:border-rose-600/50 hover:-translate-y-px" onclick="handleLogout()" title="Keluar dari Sistem">
                     <span>🚪</span> <span class="action-text">Logout</span>
                 </button>
-                <div class="bg-white/10 border border-white/20 px-3 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-2 text-slate-200 md:ml-2">
-                    <span class="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_#10b981] animate-[pulseGlow_2s_infinite]"></span> <span class="status-text">Sistem Aktif</span>
+                <div class="bg-white/10 border border-white/20 px-3 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-2 text-slate-200 md:ml-2" id="netStatusBadge" title="Status Koneksi Jaringan Cloud">
+                    <span class="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_#10b981] animate-[pulseGlow_2s_infinite]" id="netStatusDot"></span> <span class="status-text" id="netStatusText">Sistem Online</span>
                 </div>
             </div>
         </header>

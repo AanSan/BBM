@@ -82,14 +82,16 @@ function showMainApp() {
 
 function handleAuthError() {
     clearAuthToken();
+    try { localStorage.removeItem('bbm_cached_db'); } catch(e){}
     showLoginScreen();
-    showToast('\u26a0\ufe0f Sesi habis, silakan login kembali.', 'warning');
+    showToast('⚠️ Sesi habis, silakan login kembali.', 'warning');
 }
 
 function handleLogout() {
     clearAuthToken();
+    try { localStorage.removeItem('bbm_cached_db'); } catch(e){}
     showLoginScreen();
-    showToast('\ud83d\udeaa Anda telah keluar dari sistem.', 'info');
+    showToast('🚪 Anda telah keluar dari sistem.', 'info');
 }
 
 // ============================================================
@@ -152,23 +154,38 @@ function mintaIzinNotifikasi() {
 }
 
 function kirimNotifikasiSistem(title, body, tag = 'bbm-general') {
-    if (!('Notification' in window) || Notification.permission !== 'granted') {
-        return;
-    }
+    if (!('Notification' in window)) return;
+
     const options = {
         body: body,
-        icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f172a'/><text y='.9em' x='10' font-size='80'>🏛️</text></svg>",
-        badge: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f172a'/><text y='.9em' x='10' font-size='80'>🏛️</text></svg>",
+        icon: "icons/icon-192.png",
+        badge: "icons/icon-192.png",
         tag: tag,
-        renotify: true
+        renotify: true,
+        vibrate: [200, 100, 200]
     };
 
-    if (navigator.serviceWorker && navigator.serviceWorker.ready) {
-        navigator.serviceWorker.ready.then(reg => {
-            reg.showNotification(title, options);
+    const triggerNotif = () => {
+        if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+            navigator.serviceWorker.ready.then(reg => {
+                reg.showNotification(title, options);
+            }).catch(() => {
+                new Notification(title, options);
+            });
+        } else {
+            new Notification(title, options);
+        }
+    };
+
+    if (Notification.permission === 'granted') {
+        triggerNotif();
+    } else if (Notification.permission === 'default') {
+        Notification.requestPermission().then(permission => {
+            periksaStatusNotifikasi();
+            if (permission === 'granted') {
+                triggerNotif();
+            }
         });
-    } else {
-        new Notification(title, options);
     }
 }
 
@@ -182,25 +199,131 @@ function togglePasswordVisibility() {
     }
 }
 
-function fetchWithAuth(payload) {
-    payload.token = getAuthToken();
-    return fetch(SPREADSHEET_WEBAPP_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(payload)
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data && data.status === 'auth_error') {
-            handleAuthError();
-            return null;
+// Network status helper
+function setNetworkStatus(status, customText = null) {
+    const badge = document.getElementById('netStatusBadge');
+    const dot = document.getElementById('netStatusDot');
+    const text = document.getElementById('netStatusText');
+    if (!badge || !dot || !text) return;
+
+    if (status === 'online') {
+        dot.className = "w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_#10b981] animate-[pulseGlow_2s_infinite]";
+        text.textContent = customText || "Sistem Online";
+        badge.title = "Koneksi ke server Cloud aktif & tersinkron";
+    } else if (status === 'syncing') {
+        dot.className = "w-2 h-2 bg-amber-400 rounded-full shadow-[0_0_8px_#f59e0b] animate-ping";
+        text.textContent = customText || "Menyinkronkan...";
+        badge.title = "Menghubungkan ke Cloud...";
+    } else if (status === 'offline') {
+        dot.className = "w-2 h-2 bg-rose-500 rounded-full shadow-[0_0_8px_#f43f5e]";
+        text.textContent = customText || "Mode Offline";
+        badge.title = "Koneksi terputus. Menggunakan data lokal.";
+    }
+}
+
+// Queue offline requests
+function enqueueOfflineAction(payload) {
+    try {
+        const queue = JSON.parse(localStorage.getItem('bbm_offline_queue') || '[]');
+        queue.push({ payload, timestamp: Date.now() });
+        localStorage.setItem('bbm_offline_queue', JSON.stringify(queue));
+        showToast("⚠️ Koneksi terputus. Data disimpan di antrean offline HP Anda.", "warning");
+        setNetworkStatus('offline', 'Data Pending (Offline)');
+    } catch (e) {
+        console.error("Gagal menyimpan antrean offline:", e);
+    }
+}
+
+// Process offline queue when online
+async function prosesOfflineQueue() {
+    if (!navigator.onLine || !SPREADSHEET_WEBAPP_URL) return;
+    try {
+        const queue = JSON.parse(localStorage.getItem('bbm_offline_queue') || '[]');
+        if (queue.length === 0) return;
+
+        setNetworkStatus('syncing', `Menyinkronkan (${queue.length})...`);
+        let successCount = 0;
+        const remainingQueue = [];
+
+        for (const item of queue) {
+            try {
+                const res = await fetchWithAuth(item.payload, 1, 10000, true);
+                if (res && (res.status === 'success' || res.status === 'ok' || !res.status)) {
+                    successCount++;
+                } else {
+                    remainingQueue.push(item);
+                }
+            } catch (err) {
+                remainingQueue.push(item);
+            }
         }
-        return data;
-    })
-    .catch(err => {
-        console.error('Request error:', err);
+
+        localStorage.setItem('bbm_offline_queue', JSON.stringify(remainingQueue));
+
+        if (successCount > 0) {
+            showToast(`✅ ${successCount} transaksi offline berhasil disinkronkan ke Cloud!`, 'success');
+            muatDataDariSpreadsheet(false);
+        }
+        if (remainingQueue.length === 0) {
+            setNetworkStatus('online', 'Sistem Online');
+        }
+    } catch (e) {
+        console.error("Gagal memproses offline queue:", e);
+    }
+}
+
+// Auto-retry fetch helper with timeout
+async function fetchWithAuth(payload, maxRetries = 2, timeoutMs = 15000, isQueueProcess = false) {
+    if (!SPREADSHEET_WEBAPP_URL) return null;
+    payload.token = getAuthToken();
+
+    if (!navigator.onLine && !isQueueProcess) {
+        enqueueOfflineAction(payload);
         return null;
-    });
+    }
+
+    setNetworkStatus('syncing');
+
+    let attempt = 0;
+    while (attempt <= maxRetries) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+        try {
+            const res = await fetch(SPREADSHEET_WEBAPP_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(payload),
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+
+            if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+
+            const data = await res.json();
+            setNetworkStatus('online');
+
+            if (data && data.status === 'auth_error') {
+                handleAuthError();
+                return null;
+            }
+            return data;
+        } catch (err) {
+            clearTimeout(timeoutId);
+            attempt++;
+            console.warn(`[Network Retry] Attempt ${attempt}/${maxRetries} failed:`, err.message || err);
+
+            if (attempt > maxRetries) {
+                if (!isQueueProcess) {
+                    enqueueOfflineAction(payload);
+                }
+                setNetworkStatus('offline');
+                return null;
+            }
+            await new Promise(r => setTimeout(r, attempt * 800));
+        }
+    }
+    return null;
 }
 
 const BADGE_CLASS_MAP = {
@@ -438,15 +561,68 @@ function tampilkanSkeletonLoading() {
     if (tbodyOpname) tbodyOpname.innerHTML = getSkeletonRowsHtml(7, 4);
 }
 
-function muatDataDariSpreadsheet() {
+function simpanCacheLokalData() {
+    try {
+        const cacheObj = {
+            nota: databaseNota,
+            intransit: databaseIntransit,
+            saldoAwal: databaseSaldoAwal,
+            pembelian: databasePembelian,
+            opname: databaseOpname,
+            timestamp: Date.now()
+        };
+        localStorage.setItem('bbm_cached_db', JSON.stringify(cacheObj));
+    } catch (e) {
+        console.warn("Gagal simpan database cache ke localStorage:", e);
+    }
+}
+
+function muatCacheLokalData() {
+    try {
+        const raw = localStorage.getItem('bbm_cached_db');
+        if (!raw) return false;
+        const cache = JSON.parse(raw);
+        if (cache && cache.nota) {
+            databaseNota = cache.nota || [];
+            databaseIntransit = cache.intransit || [];
+            databaseSaldoAwal = cache.saldoAwal || [];
+            databasePembelian = cache.pembelian || [];
+            databaseOpname = cache.opname || [];
+            return true;
+        }
+    } catch (e) {
+        console.warn("Gagal muat cache database lokal:", e);
+    }
+    return false;
+}
+
+function muatDataDariSpreadsheet(showSkeleton = true) {
     if (!SPREADSHEET_WEBAPP_URL) return;
 
-    tampilkanSkeletonLoading();
+    // Load from local cache immediately (Stale-While-Revalidate)
+    const hasCache = muatCacheLokalData();
+    if (hasCache) {
+        populateDropdownIntransit();
+        renderTabel();
+        renderTabelIntransit();
+        renderTabelPembelian();
+        renderTabelOpname();
+        renderOpnameFormInputs();
+        hitungDanRenderSummary();
+    } else if (showSkeleton) {
+        tampilkanSkeletonLoading();
+    }
+
+    setNetworkStatus('syncing', 'Menyinkronkan...');
 
     const fetchUrl = SPREADSHEET_WEBAPP_URL + "?nocache=" + new Date().getTime() + "&token=" + encodeURIComponent(getAuthToken());
 
-    fetch(fetchUrl)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    fetch(fetchUrl, { signal: controller.signal })
         .then(async res => {
+            clearTimeout(timeoutId);
             if (!res.ok) throw new Error("HTTP Error " + res.status);
             return res.json();
         })
@@ -461,7 +637,9 @@ function muatDataDariSpreadsheet() {
                 databaseSaldoAwal = data.saldoAwal || [];
                 databasePembelian = data.pembelian || [];
                 databaseOpname = data.opname || [];
+                simpanCacheLokalData();
             }
+            setNetworkStatus('online', 'Sistem Online');
             populateDropdownIntransit();
             renderTabel();
             renderTabelIntransit();
@@ -469,15 +647,21 @@ function muatDataDariSpreadsheet() {
             renderTabelOpname();
             renderOpnameFormInputs();
             hitungDanRenderSummary();
+
+            prosesOfflineQueue();
         })
         .catch(err => {
+            clearTimeout(timeoutId);
             console.error("Gagal sinkronisasi cloud:", err);
-            renderTabel();
-            renderTabelIntransit();
-            renderTabelPembelian();
-            renderTabelOpname();
-            renderOpnameFormInputs();
-            hitungDanRenderSummary();
+            setNetworkStatus('offline', 'Mode Offline');
+            if (!hasCache) {
+                renderTabel();
+                renderTabelIntransit();
+                renderTabelPembelian();
+                renderTabelOpname();
+                renderOpnameFormInputs();
+                hitungDanRenderSummary();
+            }
         });
 }
 
@@ -1226,6 +1410,11 @@ function eksekusiHapus() {
         }
 
         showToast("🗑️ Data Nota berhasil dihapus", "info");
+        kirimNotifikasiSistem(
+            "🗑️ Nota SPBU Dihapus",
+            `Data Nota SPBU No. ${item.no || '-'} (${item.plat || ''}) telah dihapus dari sistem.`,
+            `nota-hapus-${Date.now()}`
+        );
         renderTabel();
         hitungDanRenderSummary();
     }
@@ -1666,6 +1855,16 @@ document.addEventListener('DOMContentLoaded', () => {
     setupTableFilterListeners();
     applyCustomDatePickerToAll();
 
+    window.addEventListener('online', () => {
+        setNetworkStatus('online', 'Sistem Online');
+        showToast("🟢 Internet terhubung kembali. Memproses sinkronisasi...", "info");
+        prosesOfflineQueue();
+    });
+    window.addEventListener('offline', () => {
+        setNetworkStatus('offline', 'Mode Offline');
+        showToast("🔴 Koneksi terputus. Menggunakan data cache lokal.", "warning");
+    });
+
     if (document.getElementById('tglOpname')) document.getElementById('tglOpname').value = getLocalDateYMD();
     if (document.getElementById('tanggalNota')) document.getElementById('tanggalNota').value = getLocalDateYMD();
     if (document.getElementById('tglAmbil')) document.getElementById('tglAmbil').value = getLocalDateYMD();
@@ -1770,6 +1969,11 @@ document.addEventListener('DOMContentLoaded', () => {
             populateDropdownIntransit();
             hitungDanRenderSummary();
             showToast(`✅ LPJ Nota (${jumlahKupon} voucher kertas) berhasil disimpan!`, 'success');
+            kirimNotifikasiSistem(
+                "📝 Nota LPJ Baru Terinput",
+                `Nota SPBU Rp${total.toLocaleString('id-ID')} (${bbm} - ${plat}) a.n ${pemohon} (${jumlahKupon} voucher) berhasil dicatat.`,
+                `nota-input-${no || Date.now()}`
+            );
         });
     }
 
@@ -1799,6 +2003,11 @@ document.addEventListener('DOMContentLoaded', () => {
             renderTabel();
             hitungDanRenderSummary();
             showToast("✅ Data Nota LPJ berhasil diperbarui!", "success");
+            kirimNotifikasiSistem(
+                "✏️ Nota LPJ Diperbarui",
+                `Perubahan data Nota SPBU (${item.plat} - ${item.bbm}) seharga Rp${item.total.toLocaleString('id-ID')} berhasil disimpan.`,
+                `nota-edit-${item.no || Date.now()}`
+            );
         });
     }
 
@@ -1835,6 +2044,11 @@ document.addEventListener('DOMContentLoaded', () => {
             renderTabelIntransit();
             hitungDanRenderSummary();
             showToast(`🚚 Kupon (${kupon} lbr) berhasil diserahkan ke ${pemohon}!`, "success");
+            kirimNotifikasiSistem(
+                "🚚 Penyerahan Kupon BBM",
+                `Kupon ${bbm} (${kupon} lembar) diserahkan ke ${pemohon} (${plat}).`,
+                `intransit-input-${id}`
+            );
         });
     }
 
@@ -1867,6 +2081,11 @@ document.addEventListener('DOMContentLoaded', () => {
             renderTabelIntransit();
             hitungDanRenderSummary();
             showToast(`↩️ Kupon (${jmlRetur} lbr) berhasil dikembalikan ke brankas!`, "success");
+            kirimNotifikasiSistem(
+                "↩️ Retur Kupon BBM",
+                `${jmlRetur} lembar kupon telah dikembalikan ke brankas brankas.${alasan ? ' Alasan: ' + alasan : ''}`,
+                `retur-input-${Date.now()}`
+            );
         });
     }
 
@@ -1901,6 +2120,11 @@ document.addEventListener('DOMContentLoaded', () => {
             hitungDanRenderSummary();
             renderOpnameFormInputs();
             showToast(`📦 Pasokan kupon (${kupon} lbr ${barang}) berhasil ditambahkan!`, "success");
+            kirimNotifikasiSistem(
+                "📦 Pasokan Stok BBM Baru",
+                `Pasokan baru ${kupon} lembar kupon ${barang} (Rp${jumlah.toLocaleString('id-ID')}) berhasil dicatat.`,
+                `pasokan-input-${Date.now()}`
+            );
         });
     }
 
@@ -1938,6 +2162,11 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             showToast("📊 Hasil Stok Opname Fisik Berhasil Disimpan & Disesuaikan!", "success");
+            kirimNotifikasiSistem(
+                "📊 Stok Opname Disimpan",
+                `Hasil opname fisik kupon BBM per tanggal ${tanggal} berhasil disesuaikan dan disimpan.`,
+                `opname-input-${Date.now()}`
+            );
             hitungDanRenderSummary();
             renderTabelOpname();
             renderOpnameFormInputs();
