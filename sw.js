@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bbm-kppd-v8';
+const CACHE_NAME = 'bbm-kppd-v9';
 const STATIC_ASSETS = [
     './',
     './index.html',
