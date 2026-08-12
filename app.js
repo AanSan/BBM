@@ -73,11 +73,26 @@ function showLoginScreen() {
     if (main) main.style.display = 'none';
 }
 
+function handleUrlShortcutAction() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const action = urlParams.get('action') || window.location.hash.replace('#', '');
+    if (action === 'scan_nota') {
+        switchTab('tabNota');
+        setTimeout(() => {
+            const camInput = document.getElementById('fileNotaKamera');
+            if (camInput) {
+                camInput.click();
+            }
+        }, 500);
+    }
+}
+
 function showMainApp() {
     const login = document.getElementById('loginScreen');
     const main = document.getElementById('mainContainer');
     if (login) login.style.display = 'none';
     if (main) main.style.display = '';
+    handleUrlShortcutAction();
 }
 
 function handleAuthError() {
@@ -773,6 +788,107 @@ function applyCustomSelectToAll() {
     });
 }
 
+// ============================================================
+// POPUP / MODAL & HP BACK BUTTON HISTORY MANAGER
+// ============================================================
+let menuHistoryStack = [];
+let isPopStateActive = false;
+
+function registerMenuOpen(closeFn) {
+    menuHistoryStack.push(closeFn);
+    try {
+        history.pushState({ popupOpen: true, depth: menuHistoryStack.length }, '');
+    } catch (e) {}
+}
+
+function handleMenuClose() {
+    if (isPopStateActive) return;
+    if (menuHistoryStack.length > 0) {
+        menuHistoryStack.pop();
+        if (history.state && history.state.popupOpen) {
+            try {
+                history.back();
+            } catch (e) {}
+        }
+    }
+}
+
+function closeAllPopups(fromPopState = false) {
+    let closedAny = false;
+    document.querySelectorAll('.custom-select-wrapper.open').forEach(w => {
+        w.classList.remove('open');
+        closedAny = true;
+    });
+    document.querySelectorAll('.custom-datepicker-wrapper.open').forEach(w => {
+        w.classList.remove('open');
+        closedAny = true;
+    });
+    document.querySelectorAll('.image-modal-overlay').forEach(m => {
+        if (m.style.display !== 'none') {
+            m.style.display = 'none';
+            closedAny = true;
+        }
+    });
+
+    if (closedAny && !fromPopState) {
+        handleMenuClose();
+    }
+}
+
+// HP Back Button Event Handler (popstate)
+window.addEventListener('popstate', () => {
+    const openSelects = document.querySelectorAll('.custom-select-wrapper.open');
+    const openDatepickers = document.querySelectorAll('.custom-datepicker-wrapper.open');
+    const openModals = Array.from(document.querySelectorAll('.image-modal-overlay')).filter(m => m.style.display !== 'none');
+
+    if (openSelects.length > 0 || openDatepickers.length > 0 || openModals.length > 0) {
+        isPopStateActive = true;
+        closeAllPopups(true);
+        if (menuHistoryStack.length > 0) menuHistoryStack.pop();
+        setTimeout(() => { isPopStateActive = false; }, 50);
+    }
+});
+
+// Universal Backdrop Overlay / Click Outside Handler
+const handleBackdropTapOutside = (e) => {
+    // 1. Custom Selects
+    document.querySelectorAll('.custom-select-wrapper.open').forEach(wrapper => {
+        const popover = wrapper.querySelector('.custom-select-popover');
+        const trigger = wrapper.querySelector('.custom-select-trigger');
+        if (popover && !popover.contains(e.target) && trigger && !trigger.contains(e.target)) {
+            wrapper.classList.remove('open');
+            handleMenuClose();
+        }
+    });
+
+    // 2. Custom DatePickers
+    document.querySelectorAll('.custom-datepicker-wrapper.open').forEach(wrapper => {
+        const popover = wrapper.querySelector('.custom-datepicker-popover');
+        const input = wrapper.querySelector('input');
+        if (popover && !popover.contains(e.target) && input && !input.contains(e.target)) {
+            wrapper.classList.remove('open');
+            handleMenuClose();
+        }
+    });
+
+    // 3. Image & Form Modals
+    document.querySelectorAll('.image-modal-overlay').forEach(modal => {
+        if (modal.style.display !== 'none' && e.target === modal) {
+            modal.style.display = 'none';
+            handleMenuClose();
+        }
+    });
+};
+
+document.addEventListener('click', handleBackdropTapOutside);
+document.addEventListener('pointerdown', (e) => {
+    if (e.target.classList.contains('image-modal-overlay') || 
+        (e.target.classList.contains('custom-select-wrapper') && e.target.classList.contains('open')) ||
+        (e.target.classList.contains('custom-datepicker-wrapper') && e.target.classList.contains('open'))) {
+        handleBackdropTapOutside(e);
+    }
+});
+
 function renderCustomSelect(selectId) {
     const selectEl = document.getElementById(selectId);
     if (!selectEl) return;
@@ -802,9 +918,11 @@ function renderCustomSelect(selectId) {
 
         trigger.addEventListener('click', (e) => {
             e.stopPropagation();
-            document.querySelectorAll('.custom-select-wrapper').forEach(w => w !== wrapper && w.classList.remove('open'));
-            wrapper.classList.toggle('open');
-            if (wrapper.classList.contains('open')) {
+            const isOpen = wrapper.classList.contains('open');
+            closeAllPopups();
+            if (!isOpen) {
+                wrapper.classList.add('open');
+                registerMenuOpen(() => wrapper.classList.remove('open'));
                 const searchInp = popover.querySelector('.custom-select-input-search');
                 if (searchInp) {
                     searchInp.value = '';
@@ -817,10 +935,6 @@ function renderCustomSelect(selectId) {
                     buildOptions();
                 }
             }
-        });
-
-        document.addEventListener('click', (e) => {
-            if (!wrapper.contains(e.target)) wrapper.classList.remove('open');
         });
 
         selectEl.addEventListener('change', () => {
@@ -868,6 +982,7 @@ function renderCustomSelect(selectId) {
                     selectEl.dispatchEvent(new Event('change', { bubbles: true }));
                     updateTriggerText();
                     wrapper.classList.remove('open');
+                    handleMenuClose();
                     buildOptions();
                 });
                 optionsList.appendChild(card);
@@ -898,6 +1013,7 @@ function renderCustomSelect(selectId) {
                         selectEl.dispatchEvent(new Event('change', { bubbles: true }));
                         updateTriggerText();
                         wrapper.classList.remove('open');
+                        handleMenuClose();
                         buildOptions();
                     });
 
@@ -922,6 +1038,7 @@ function renderCustomSelect(selectId) {
                     selectEl.dispatchEvent(new Event('change', { bubbles: true }));
                     updateTriggerText();
                     wrapper.classList.remove('open');
+                    handleMenuClose();
                     buildOptions();
                 });
 
@@ -1331,7 +1448,10 @@ function renderTabelOpname() {
 // ============================================================
 // MODAL LIGHTBOX & PREVIEW FOTO
 // ============================================================
-function bukaModalFoto(index) {
+// MODAL PRATINJAU FOTO
+// ============================================================
+function bukaModalFoto(index, event) {
+    if (event) event.stopPropagation();
     const item = databaseNota[index];
     if (!item) return;
     const fotoSrc = item.fotoUrl || item.foto;
@@ -1345,13 +1465,22 @@ function bukaModalFoto(index) {
     if (modal && img) {
         img.src = fotoSrc;
         if (title) title.innerText = `Detail Bukti Nota ${item.no || ''} (${item.plat || ''})`;
+        closeAllPopups();
         modal.style.display = 'flex';
+        registerMenuOpen(() => modal.style.display = 'none');
     }
+}
+
+function bukaDetailFoto(index, event) {
+    bukaModalFoto(index, event);
 }
 
 function tutupModalFoto() {
     const modal = document.getElementById('photoViewerModal');
-    if (modal) modal.style.display = 'none';
+    if (modal && modal.style.display !== 'none') {
+        modal.style.display = 'none';
+        handleMenuClose();
+    }
 }
 
 // ============================================================
@@ -1370,12 +1499,19 @@ function bukaEditNota(index) {
     document.getElementById('editNamaPemohon').value = item.pemohon || '';
 
     const modal = document.getElementById('editNotaModal');
-    if (modal) modal.style.display = 'flex';
+    if (modal) {
+        closeAllPopups();
+        modal.style.display = 'flex';
+        registerMenuOpen(() => modal.style.display = 'none');
+    }
 }
 
 function tutupModalEdit() {
     const modal = document.getElementById('editNotaModal');
-    if (modal) modal.style.display = 'none';
+    if (modal && modal.style.display !== 'none') {
+        modal.style.display = 'none';
+        handleMenuClose();
+    }
 }
 
 // ============================================================
@@ -1388,13 +1524,20 @@ function konfirmasiHapusNota(index) {
     const msg = document.getElementById('confirmDeleteMsg');
     if (msg) msg.innerText = `Apakah Anda yakin ingin menghapus Nota ${item.no || ''} (${item.plat}) seharga Rp${(item.total || 0).toLocaleString('id-ID')}?`;
     const modal = document.getElementById('confirmDeleteModal');
-    if (modal) modal.style.display = 'flex';
+    if (modal) {
+        closeAllPopups();
+        modal.style.display = 'flex';
+        registerMenuOpen(() => modal.style.display = 'none');
+    }
 }
 
 function tutupModalHapus() {
     pendingDeleteAction = null;
     const modal = document.getElementById('confirmDeleteModal');
-    if (modal) modal.style.display = 'none';
+    if (modal && modal.style.display !== 'none') {
+        modal.style.display = 'none';
+        handleMenuClose();
+    }
 }
 
 function eksekusiHapus() {
@@ -1701,21 +1844,26 @@ function bukaModalCetakBA() {
     const baTotalNilaiFisik = document.getElementById('baTotalNilaiFisik');
     if (baTotalNilaiFisik) baTotalNilaiFisik.textContent = `Rp${grandFisikRp.toLocaleString('id-ID')}`;
 
+    closeAllPopups();
     modal.style.display = 'flex';
+    registerMenuOpen(() => modal.style.display = 'none');
 }
 
 function tutupModalCetakBA() {
     const modal = document.getElementById('printBAModal');
-    if (modal) modal.style.display = 'none';
+    if (modal && modal.style.display !== 'none') {
+        modal.style.display = 'none';
+        handleMenuClose();
+    }
 }
 
 // ============================================================
 // CUSTOM INDONESIAN DATE PICKER POPOVER COMPONENT
 // ============================================================
 function applyCustomDatePickerToAll() {
-    const dateInputs = document.querySelectorAll('input[type="date"]');
-    dateInputs.forEach(input => {
-        if (input.id) renderCustomDatePicker(input.id);
+    const allDateInputs = document.querySelectorAll('input[type="date"]');
+    allDateInputs.forEach(inp => {
+        if (inp.id) renderCustomDatePicker(inp.id);
     });
 }
 
@@ -1736,9 +1884,12 @@ function renderCustomDatePicker(inputId) {
 
         inputEl.addEventListener('click', (e) => {
             e.preventDefault();
-            document.querySelectorAll('.custom-datepicker-wrapper').forEach(w => w !== wrapper && w.classList.remove('open'));
-            wrapper.classList.toggle('open');
-            if (wrapper.classList.contains('open')) {
+            e.stopPropagation();
+            const isOpen = wrapper.classList.contains('open');
+            closeAllPopups();
+            if (!isOpen) {
+                wrapper.classList.add('open');
+                registerMenuOpen(() => wrapper.classList.remove('open'));
                 const rect = wrapper.getBoundingClientRect();
                 if (rect.left + 285 > window.innerWidth - 15) {
                     popover.style.left = 'auto';
@@ -1749,10 +1900,6 @@ function renderCustomDatePicker(inputId) {
                 }
                 renderCalendar();
             }
-        });
-
-        document.addEventListener('click', (e) => {
-            if (!wrapper.contains(e.target)) wrapper.classList.remove('open');
         });
     }
 

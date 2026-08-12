@@ -22,6 +22,20 @@
       "purpose": "maskable"
     }
   ],
+  "shortcuts": [
+    {
+      "name": "📷 Scan Nota SPBU",
+      "short_name": "Scan Nota",
+      "description": "Buka kamera langsung untuk scan & input foto nota SPBU",
+      "url": "./index.html?action=scan_nota",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
   "start_url": "./index.html",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",

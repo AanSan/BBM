@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bbm-kppd-v2';
+const CACHE_NAME = 'bbm-kppd-v5';
 const STATIC_ASSETS = [
     './',
     './index.html',
@@ -50,7 +50,7 @@ self.addEventListener('fetch', event => {
         caches.match(event.request).then(cachedResponse => {
             const fetchPromise = fetch(event.request).then(networkResponse => {
                 // Fix: cache juga CORS responses (Google Fonts, CDN assets)
-                if (networkResponse && networkResponse.status === 200 && 
+                if (networkResponse && networkResponse.status === 200 &&
                     (networkResponse.type === 'basic' || networkResponse.type === 'cors')) {
                     const responseToCache = networkResponse.clone();
                     caches.open(CACHE_NAME).then(cache => {
