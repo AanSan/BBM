@@ -1,12 +1,11 @@
-const CACHE_NAME = 'bbm-kppd-v5';
+const CACHE_NAME = 'bbm-kppd-v8';
 const STATIC_ASSETS = [
     './',
     './index.html',
     './style.css',
     './app.js',
     './manifest.json',
-    'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap',
-    'https://cdn.tailwindcss.com'
+    'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap'
 ];
 
 // Install Event — Cache Static Resources

@@ -1955,6 +1955,8 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
         backdrop-filter: blur(4px);
         -webkit-backdrop-filter: blur(4px);
         z-index: 9998;
+        cursor: pointer;
+        touch-action: manipulation;
     }
 }
 

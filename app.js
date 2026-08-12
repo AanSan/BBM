@@ -97,14 +97,14 @@ function showMainApp() {
 
 function handleAuthError() {
     clearAuthToken();
-    try { localStorage.removeItem('bbm_cached_db'); } catch(e){}
+    try { localStorage.removeItem('bbm_cached_db'); } catch (e) { }
     showLoginScreen();
     showToast('⚠️ Sesi habis, silakan login kembali.', 'warning');
 }
 
 function handleLogout() {
     clearAuthToken();
-    try { localStorage.removeItem('bbm_cached_db'); } catch(e){}
+    try { localStorage.removeItem('bbm_cached_db'); } catch (e) { }
     showLoginScreen();
     showToast('🚪 Anda telah keluar dari sistem.', 'info');
 }
@@ -798,7 +798,7 @@ function registerMenuOpen(closeFn) {
     menuHistoryStack.push(closeFn);
     try {
         history.pushState({ popupOpen: true, depth: menuHistoryStack.length }, '');
-    } catch (e) {}
+    } catch (e) { }
 }
 
 function handleMenuClose() {
@@ -808,7 +808,7 @@ function handleMenuClose() {
         if (history.state && history.state.popupOpen) {
             try {
                 history.back();
-            } catch (e) {}
+            } catch (e) { }
         }
     }
 }
@@ -882,7 +882,7 @@ const handleBackdropTapOutside = (e) => {
 
 document.addEventListener('click', handleBackdropTapOutside);
 document.addEventListener('pointerdown', (e) => {
-    if (e.target.classList.contains('image-modal-overlay') || 
+    if (e.target.classList.contains('image-modal-overlay') ||
         (e.target.classList.contains('custom-select-wrapper') && e.target.classList.contains('open')) ||
         (e.target.classList.contains('custom-datepicker-wrapper') && e.target.classList.contains('open'))) {
         handleBackdropTapOutside(e);
@@ -2032,37 +2032,62 @@ document.addEventListener('DOMContentLoaded', () => {
             if (errorDiv) errorDiv.style.display = 'none';
             if (submitBtn) submitBtn.disabled = true;
 
-            fetch(SPREADSHEET_WEBAPP_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: 'login', password: password })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.status === 'success' && data.token) {
-                    setAuthToken(data.token);
-                    showMainApp();
-                    muatDataDariSpreadsheet();
-                    showToast('\u2705 Login berhasil! Selamat datang.', 'success');
-                } else {
-                    if (errorDiv) {
-                        errorDiv.textContent = data.message || 'Password salah!';
-                        errorDiv.style.display = 'block';
+            const attemptLogin = async (maxRetries = 2) => {
+                let attempt = 0;
+                while (attempt <= maxRetries) {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+                    try {
+                        const res = await fetch(SPREADSHEET_WEBAPP_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                            body: JSON.stringify({ action: 'login', password: password }),
+                            signal: controller.signal,
+                            redirect: 'follow'
+                        });
+                        clearTimeout(timeoutId);
+
+                        if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+
+                        const data = await res.json();
+                        return data;
+                    } catch (err) {
+                        clearTimeout(timeoutId);
+                        attempt++;
+                        console.warn(`[Login Retry] Attempt ${attempt}/${maxRetries} failed:`, err.message || err);
+                        if (attempt > maxRetries) throw err;
+                        await new Promise(r => setTimeout(r, 1000));
                     }
                 }
-            })
-            .catch(err => {
-                console.error('Login error:', err);
-                if (errorDiv) {
-                    errorDiv.textContent = 'Gagal terhubung ke server. Coba lagi.';
-                    errorDiv.style.display = 'block';
-                }
-            })
-            .finally(() => {
-                if (btnText) btnText.style.display = 'inline';
-                if (btnLoading) btnLoading.style.display = 'none';
-                if (submitBtn) submitBtn.disabled = false;
-            });
+            };
+
+            attemptLogin()
+                .then(data => {
+                    if (data && data.status === 'success' && data.token) {
+                        setAuthToken(data.token);
+                        showMainApp();
+                        muatDataDariSpreadsheet();
+                        showToast('Login berhasil! Selamat datang.', 'success');
+                    } else {
+                        if (errorDiv) {
+                            errorDiv.textContent = (data && data.message) ? data.message : 'Password salah!';
+                            errorDiv.style.display = 'block';
+                        }
+                    }
+                })
+                .catch(err => {
+                    console.error('Login error:', err);
+                    if (errorDiv) {
+                        errorDiv.textContent = '⚠️ Gagal terhubung ke server. Periksa koneksi internet Anda lalu coba lagi.';
+                        errorDiv.style.display = 'block';
+                    }
+                })
+                .finally(() => {
+                    if (btnText) btnText.style.display = 'inline';
+                    if (btnLoading) btnLoading.style.display = 'none';
+                    if (submitBtn) submitBtn.disabled = false;
+                });
         });
     }
 

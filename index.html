@@ -4,28 +4,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="description" content="Sistem Logistik Kupon BBM Operasional KPPD DIY di Kabupaten Bantul — Pengelolaan LPJ Nota SPBU, Rekonsiliasi Intransit, Pasokan, dan Stok Opname Kupon BBM.">
+    <meta name="description"
+        content="Sistem Logistik Kupon BBM Operasional KPPD DIY di Kabupaten Bantul — Pengelolaan LPJ Nota SPBU, Rekonsiliasi Intransit, Pasokan, dan Stok Opname Kupon BBM.">
     <meta name="robots" content="noindex, nofollow">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#0f172a">
-    
+
     <!-- Open Graph / WhatsApp Social Sharing Tags -->
     <meta property="og:type" content="website">
     <meta property="og:title" content="Sistem Logistik Kupon BBM — KPPD DIY Kab. Bantul">
-    <meta property="og:description" content="Sistem Manajemen & Rekonsiliasi Logistik Kupon BBM Operasional Kendaraan Dinas KPPD DIY di Kabupaten Bantul.">
+    <meta property="og:description"
+        content="Sistem Manajemen & Rekonsiliasi Logistik Kupon BBM Operasional Kendaraan Dinas KPPD DIY di Kabupaten Bantul.">
     <meta property="og:site_name" content="KPPD DIY di Kab. Bantul">
-    
+
     <!-- Twitter Card Meta -->
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="Sistem Logistik Kupon BBM — KPPD DIY Kab. Bantul">
-    <meta name="twitter:description" content="Sistem Manajemen & Rekonsiliasi Logistik Kupon BBM Operasional Kendaraan Dinas KPPD DIY di Kabupaten Bantul.">
+    <meta name="twitter:description"
+        content="Sistem Manajemen & Rekonsiliasi Logistik Kupon BBM Operasional Kendaraan Dinas KPPD DIY di Kabupaten Bantul.">
 
     <title>Sistem Manajemen & Rekonsiliasi Kupon BBM — KPPD DIY di Kab. Bantul</title>
-    
+
     <!-- Favicon Inline Data URI & Apple Touch Icon -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏛️</text></svg>">
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏛️</text></svg>">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
     <meta name="apple-mobile-web-app-title" content="BBM KPPD">
 
@@ -34,7 +38,8 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -78,44 +83,70 @@
     <script src="app.js" defer></script>
 </head>
 
-<body class="bg-app-bg text-txt-dark font-sans min-h-screen relative antialiased selection:bg-primary-indigo selection:text-white" style="background-image: radial-gradient(circle at 10% 10%, rgba(79, 70, 229, 0.03) 0%, transparent 40%), radial-gradient(circle at 90% 90%, rgba(16, 185, 129, 0.03) 0%, transparent 40%); padding-top: calc(12px + env(safe-area-inset-top)); padding-bottom: calc(24px + env(safe-area-inset-bottom));">
+<body
+    class="bg-app-bg text-txt-dark font-sans min-h-screen relative antialiased selection:bg-primary-indigo selection:text-white"
+    style="background-image: radial-gradient(circle at 10% 10%, rgba(79, 70, 229, 0.03) 0%, transparent 40%), radial-gradient(circle at 90% 90%, rgba(16, 185, 129, 0.03) 0%, transparent 40%); padding-top: calc(12px + env(safe-area-inset-top)); padding-bottom: calc(24px + env(safe-area-inset-bottom));">
     <!-- Container Toast Notification -->
     <div id="toastContainer" class="toast-container"></div>
 
     <!-- Login Screen Overlay -->
-    <div id="loginScreen" class="login-overlay fixed inset-0 w-screen h-screen bg-gradient-to-br from-brand-dark via-brand-navy to-[#312e81] flex justify-center items-center z-[99999] p-5 overflow-hidden" style="display: flex;">
-        <div class="login-card relative bg-white/5 backdrop-blur-xl border border-white/10 rounded-[28px] p-8 sm:p-10 w-full max-w-[420px] shadow-2xl animate-[loginCardPop_0.5s_cubic-bezier(0.34,1.56,0.64,1)]">
-            <div class="login-header flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8 pb-5 sm:pb-6 border-b border-white/10">
-                <div class="login-logo-icon w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-primary-indigo to-[#818cf8] flex items-center justify-center text-[22px] sm:text-[28px] shadow-[0_8px_24px_rgba(79,70,229,0.35)] shrink-0">🏛️</div>
+    <div id="loginScreen"
+        class="login-overlay fixed inset-0 w-screen h-screen bg-gradient-to-br from-brand-dark via-brand-navy to-[#312e81] flex justify-center items-center z-[99999] p-5 overflow-hidden"
+        style="display: flex;">
+        <div
+            class="login-card relative bg-white/5 backdrop-blur-xl border border-white/10 rounded-[28px] p-8 sm:p-10 w-full max-w-[420px] shadow-2xl animate-[loginCardPop_0.5s_cubic-bezier(0.34,1.56,0.64,1)]">
+            <div
+                class="login-header flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8 pb-5 sm:pb-6 border-b border-white/10">
+                <div
+                    class="login-logo-icon w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-primary-indigo to-[#818cf8] flex items-center justify-center text-[22px] sm:text-[28px] shadow-[0_8px_24px_rgba(79,70,229,0.35)] shrink-0">
+                    🏛️</div>
                 <div class="login-brand">
-                    <span class="login-sub-title block text-[9.5px] font-bold tracking-[1.5px] uppercase text-white/45 mb-1">PEMDA DIY — KPPD KABUPATEN BANTUL</span>
-                    <h2 class="text-[15px] sm:text-[18px] font-extrabold text-white tracking-tight m-0 leading-snug">Sistem Logistik Kupon BBM</h2>
+                    <span
+                        class="login-sub-title block text-[9.5px] font-bold tracking-[1.5px] uppercase text-white/45 mb-1">KPPD
+                        DIY DI KABUPATEN BANTUL</span>
+                    <h2 class="text-[15px] sm:text-[18px] font-extrabold text-white tracking-tight m-0 leading-snug">
+                        Sistem Logistik Kupon BBM</h2>
                 </div>
             </div>
             <form id="formLogin" class="login-form flex flex-col gap-4 sm:gap-5">
+                <input type="text" name="username" value="admin" autocomplete="username" class="sr-only"
+                    style="display: none;" aria-hidden="true">
                 <div class="login-input-group">
-                    <label for="loginPassword" class="block text-[12.5px] font-bold text-white/65 mb-2">🔐 Password Akses Sistem</label>
+                    <label for="loginPassword" class="block text-[12.5px] font-bold text-white/65 mb-2">🔐 Password
+                        Akses Sistem</label>
                     <div class="login-password-wrapper relative flex items-center">
-                        <input type="password" id="loginPassword" class="w-full min-h-[52px] py-3.5 pr-12 pl-4 bg-white/5 border-[1.5px] border-white/15 rounded-2xl text-white text-[15px] font-semibold outline-none transition-all duration-250 placeholder:text-white/30 focus:border-indigo-500 focus:bg-white/10 focus:ring-4 focus:ring-indigo-500/20" placeholder="Masukkan password..." required autocomplete="current-password">
-                        <button type="button" class="login-toggle-pwd absolute right-2 w-9 h-9 rounded-xl bg-white/5 text-white/50 text-base flex items-center justify-center transition-all duration-200 hover:bg-white/15 hover:text-white" onclick="togglePasswordVisibility()" aria-label="Tampilkan atau sembunyikan password">👁️</button>
+                        <input type="password" id="loginPassword"
+                            class="w-full min-h-[52px] py-3.5 pr-12 pl-4 bg-white/5 border-[1.5px] border-white/15 rounded-2xl text-white text-[15px] font-semibold outline-none transition-all duration-250 placeholder:text-white/30 focus:border-indigo-500 focus:bg-white/10 focus:ring-4 focus:ring-indigo-500/20"
+                            placeholder="Masukkan password..." required autocomplete="current-password">
+                        <button type="button"
+                            class="login-toggle-pwd absolute right-2 w-9 h-9 rounded-xl bg-white/5 text-white/50 text-base flex items-center justify-center transition-all duration-200 hover:bg-white/15 hover:text-white"
+                            onclick="togglePasswordVisibility()"
+                            aria-label="Tampilkan atau sembunyikan password">👁️</button>
                     </div>
                 </div>
-                <div id="loginError" class="login-error-msg bg-rose-600/15 border border-rose-600/30 text-rose-300 py-3 px-4 rounded-xl text-[13px] font-bold text-center" style="display: none;"></div>
-                <button type="submit" class="login-submit-btn w-full min-h-[52px] py-3.5 px-6 rounded-2xl bg-gradient-to-br from-indigo-600 to-indigo-400 text-white text-[15px] font-extrabold shadow-[0_8px_24px_rgba(79,70,229,0.4)] transition-all duration-250 hover:-translate-y-0.5 hover:shadow-[0_12px_32px_rgba(79,70,229,0.5)] active:translate-y-0 active:shadow-md relative overflow-hidden group" id="loginSubmitBtn">
+                <div id="loginError"
+                    class="login-error-msg bg-rose-600/15 border border-rose-600/30 text-rose-300 py-3 px-4 rounded-xl text-[13px] font-bold text-center"
+                    style="display: none;"></div>
+                <button type="submit"
+                    class="login-submit-btn w-full min-h-[52px] py-3.5 px-6 rounded-2xl bg-gradient-to-br from-indigo-600 to-indigo-400 text-white text-[15px] font-extrabold shadow-[0_8px_24px_rgba(79,70,229,0.4)] transition-all duration-250 hover:-translate-y-0.5 hover:shadow-[0_12px_32px_rgba(79,70,229,0.5)] active:translate-y-0 active:shadow-md relative overflow-hidden group"
+                    id="loginSubmitBtn">
                     <span class="login-btn-text">🔓 Masuk ke Sistem</span>
                     <span class="login-btn-loading" style="display: none;">⏳ Memverifikasi...</span>
                 </button>
             </form>
             <div class="login-footer-text mt-6 text-center">
-                <p class="text-[11.5px] font-semibold text-white/30 m-0">🔒 Akses terbatas untuk petugas yang berwenang</p>
+                <p class="text-[11.5px] font-semibold text-white/30 m-0">🔒 Akses terbatas untuk petugas yang berwenang
+                </p>
             </div>
         </div>
     </div>
 
     <!-- Modal Lightbox Viewer Nota -->
-    <div id="photoViewerModal" class="image-modal-overlay" style="display: none;" role="dialog" aria-labelledby="modalPhotoTitle" aria-modal="true">
+    <div id="photoViewerModal" class="image-modal-overlay" style="display: none;" role="dialog"
+        aria-labelledby="modalPhotoTitle" aria-modal="true">
         <div class="image-modal-card">
-            <button class="close-modal-btn" onclick="tutupModalFoto()" aria-label="Tutup modal pratinjau foto">&times;</button>
+            <button class="close-modal-btn" onclick="tutupModalFoto()"
+                aria-label="Tutup modal pratinjau foto">&times;</button>
             <div class="modal-header">
                 <h3 id="modalPhotoTitle">Detail Bukti Nota SPBU</h3>
             </div>
@@ -128,9 +159,10 @@
     <!-- Modal Edit Nota -->
     <div id="editNotaModal" class="image-modal-overlay" style="display: none;" role="dialog" aria-modal="true">
         <div class="edit-modal-card">
-            <button class="close-modal-btn" onclick="tutupModalEdit()" aria-label="Tutup modal edit nota">&times;</button>
+            <button class="close-modal-btn" onclick="tutupModalEdit()"
+                aria-label="Tutup modal edit nota">&times;</button>
             <div class="modal-header">
-                <h3>✏️ Edit Data Nota LPJ</h3>
+                <h3>✏️ Edit Data Nota</h3>
             </div>
             <form id="formEditNota" class="app-form">
                 <input type="hidden" id="editNotaRowIndex">
@@ -172,7 +204,8 @@
                 </div>
                 <div class="form-row" style="gap: 10px;">
                     <button type="submit" class="btn-primary" style="flex:1;">💾 Simpan Perubahan</button>
-                    <button type="button" class="btn-action outline" style="flex:0 0 auto;" onclick="tutupModalEdit()">Batal</button>
+                    <button type="button" class="btn-action outline" style="flex:0 0 auto;"
+                        onclick="tutupModalEdit()">Batal</button>
                 </div>
             </form>
         </div>
@@ -185,7 +218,8 @@
             <h3 id="confirmDeleteTitle">Konfirmasi Hapus</h3>
             <p id="confirmDeleteMsg">Apakah Anda yakin ingin menghapus data ini? Data akan diarsipkan.</p>
             <div class="confirm-btn-group">
-                <button type="button" class="btn-danger" id="confirmDeleteBtn" onclick="eksekusiHapus()">🗑️ Ya, Hapus</button>
+                <button type="button" class="btn-danger" id="confirmDeleteBtn" onclick="eksekusiHapus()">🗑️ Ya,
+                    Hapus</button>
                 <button type="button" class="btn-action outline" onclick="tutupModalHapus()">Batal</button>
             </div>
         </div>
@@ -221,7 +255,10 @@
                 </div>
 
                 <div class="ba-body">
-                    <p>Pada hari ini, <strong id="baHariTanggal">Jumat, 07 Agustus 2026</strong>, telah dilakukan Rekonsiliasi Fisik dan Penyeimbangan Stok Kupon Bahan Bakar Minyak (BBM) Operasional Kendaraan Dinas pada Kantor Pelayanan Pajak Daerah (KPPD) DIY di Kabupaten Bantul dengan rincian sebagai berikut:</p>
+                    <p>Pada hari ini, <strong id="baHariTanggal">Jumat, 07 Agustus 2026</strong>, telah dilakukan
+                        Rekonsiliasi Fisik dan Penyeimbangan Stok Kupon Bahan Bakar Minyak (BBM) Operasional Kendaraan
+                        Dinas pada Kantor Pelayanan Pajak Daerah (KPPD) DIY di Kabupaten Bantul dengan rincian sebagai
+                        berikut:</p>
 
                     <table class="ba-table">
                         <thead>
@@ -252,7 +289,9 @@
                         </div>
                     </div>
 
-                    <p class="ba-catatan">Catatan / Keterangan Tambahan: <span id="baCatatanText">Seluruh fisik kupon BBM di brankas telah dihitung dengan cermat dan sesuai dengan catatan pembukuan logistik operasional.</span></p>
+                    <p class="ba-catatan">Catatan / Keterangan Tambahan: <span id="baCatatanText">Seluruh fisik kupon
+                            BBM di brankas telah dihitung dengan cermat dan sesuai dengan catatan pembukuan logistik
+                            operasional.</span></p>
 
                     <div class="ba-signatures">
                         <div class="sig-box">
@@ -283,66 +322,107 @@
     <div class="w-full max-w-[1440px] mx-auto px-4 sm:px-5" id="mainContainer" style="display: none;">
 
         <!-- Header Banner KPPD Bantul -->
-        <header class="bg-gradient-to-br from-brand-dark via-brand-navy to-[#312e81] text-white p-4 md:p-[18px_24px] rounded-[22px] flex flex-col md:flex-row justify-between md:items-center gap-4 mb-[18px] shadow-lg relative overflow-hidden border border-white/10 w-full">
+        <header
+            class="bg-gradient-to-br from-brand-dark via-brand-navy to-[#312e81] text-white p-4 md:p-[18px_24px] rounded-[22px] flex flex-col md:flex-row justify-between md:items-center gap-4 mb-[18px] shadow-lg relative overflow-hidden border border-white/10 w-full">
             <!-- decorative background blur -->
-            <div class="absolute -top-1/2 -right-[10%] w-[220px] h-[220px] bg-[radial-gradient(circle,rgba(99,102,241,0.25)_0%,rgba(6,182,212,0)_70%)] rounded-full blur-[35px] pointer-events-none z-0"></div>
-            
+            <div
+                class="absolute -top-1/2 -right-[10%] w-[220px] h-[220px] bg-[radial-gradient(circle,rgba(99,102,241,0.25)_0%,rgba(6,182,212,0)_70%)] rounded-full blur-[35px] pointer-events-none z-0">
+            </div>
+
             <div class="flex items-center gap-[14px] z-10 relative">
-                <div class="w-11 h-11 bg-white/10 rounded-[14px] flex items-center justify-center text-[22px] backdrop-blur-md border border-white/25 shrink-0">🏛️</div>
+                <div
+                    class="w-11 h-11 bg-white/10 rounded-[14px] flex items-center justify-center text-[22px] backdrop-blur-md border border-white/25 shrink-0">
+                    🏛️</div>
                 <div>
-                    <span class="block text-[10px] tracking-[1.2px] text-amber-500 font-extrabold uppercase mb-0.5">PEMDA DIY — KPPD KABUPATEN BANTUL</span>
-                    <h1 class="text-[17px] font-extrabold tracking-[-0.3px] text-white m-0">Sistem Logistik Kupon BBM</h1>
+                    <span class="block text-[10px] tracking-[1.2px] text-amber-500 font-extrabold uppercase mb-0.5">KPPD
+                        DIY DI KABUPATEN BANTUL</span>
+                    <h1 class="text-[17px] font-extrabold tracking-[-0.3px] text-white m-0">Sistem Logistik Kupon BBM
+                    </h1>
                 </div>
             </div>
             <div class="flex items-center gap-2.5 z-10 relative flex-wrap">
-                <button type="button" class="bg-white/10 border border-white/20 text-white px-3.5 py-1.5 rounded-full text-xs font-bold cursor-pointer inline-flex items-center gap-1.5 backdrop-blur-md transition-all duration-200 hover:bg-white/20 hover:-translate-y-px" onclick="muatDataDariSpreadsheet()" title="Sinkronkan Data Cloud">
+                <button type="button"
+                    class="bg-white/10 border border-white/20 text-white px-3.5 py-1.5 rounded-full text-xs font-bold cursor-pointer inline-flex items-center gap-1.5 backdrop-blur-md transition-all duration-200 hover:bg-white/20 hover:-translate-y-px"
+                    onclick="muatDataDariSpreadsheet()" title="Sinkronkan Data Cloud">
                     <span>🔄</span> <span class="action-text">Sync Cloud</span>
                 </button>
-                <button type="button" class="bg-amber-500/25 border border-amber-500/40 text-amber-100 px-3.5 py-1.5 rounded-full text-xs font-bold cursor-pointer inline-flex items-center gap-1.5 backdrop-blur-md transition-all duration-200 hover:bg-amber-500/45 hover:-translate-y-px" id="btnEnableNotif" onclick="mintaIzinNotifikasi()" title="Aktifkan Notifikasi System HP">
+                <button type="button"
+                    class="bg-amber-500/25 border border-amber-500/40 text-amber-100 px-3.5 py-1.5 rounded-full text-xs font-bold cursor-pointer inline-flex items-center gap-1.5 backdrop-blur-md transition-all duration-200 hover:bg-amber-500/45 hover:-translate-y-px"
+                    id="btnEnableNotif" onclick="mintaIzinNotifikasi()" title="Aktifkan Notifikasi System HP">
                     <span>🔔</span> <span class="action-text" id="notifStatusText">Notif HP</span>
                 </button>
-                <button type="button" class="bg-emerald-500/25 border border-emerald-500/40 text-white px-3.5 py-1.5 rounded-full text-xs font-bold cursor-pointer inline-flex items-center gap-1.5 backdrop-blur-md transition-all duration-200 hover:bg-emerald-500/40 hover:-translate-y-px" onclick="bukaModalCetakBA()" title="Cetak Berita Acara Rekonsiliasi">
+                <button type="button"
+                    class="bg-emerald-500/25 border border-emerald-500/40 text-white px-3.5 py-1.5 rounded-full text-xs font-bold cursor-pointer inline-flex items-center gap-1.5 backdrop-blur-md transition-all duration-200 hover:bg-emerald-500/40 hover:-translate-y-px"
+                    onclick="bukaModalCetakBA()" title="Cetak Berita Acara Rekonsiliasi">
                     <span>🖨️</span> <span class="action-text">Cetak BA</span>
                 </button>
-                <button type="button" class="text-rose-300 border border-rose-600/30 bg-transparent px-3.5 py-1.5 rounded-full text-xs font-bold cursor-pointer inline-flex items-center gap-1.5 backdrop-blur-md transition-all duration-200 hover:bg-rose-600/15 hover:text-rose-400 hover:border-rose-600/50 hover:-translate-y-px" onclick="handleLogout()" title="Keluar dari Sistem">
+                <button type="button"
+                    class="text-rose-300 border border-rose-600/30 bg-transparent px-3.5 py-1.5 rounded-full text-xs font-bold cursor-pointer inline-flex items-center gap-1.5 backdrop-blur-md transition-all duration-200 hover:bg-rose-600/15 hover:text-rose-400 hover:border-rose-600/50 hover:-translate-y-px"
+                    onclick="handleLogout()" title="Keluar dari Sistem">
                     <span>🚪</span> <span class="action-text">Logout</span>
                 </button>
-                <div class="bg-white/10 border border-white/20 px-3 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-2 text-slate-200 md:ml-2" id="netStatusBadge" title="Status Koneksi Jaringan Cloud">
-                    <span class="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_#10b981] animate-[pulseGlow_2s_infinite]" id="netStatusDot"></span> <span class="status-text" id="netStatusText">Sistem Online</span>
+                <div class="bg-white/10 border border-white/20 px-3 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-2 text-slate-200 md:ml-2"
+                    id="netStatusBadge" title="Status Koneksi Jaringan Cloud">
+                    <span
+                        class="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_#10b981] animate-[pulseGlow_2s_infinite]"
+                        id="netStatusDot"></span> <span class="status-text" id="netStatusText">Sistem Online</span>
                 </div>
             </div>
         </header>
 
         <!-- Dashboard Stat Cards -->
         <section class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5 w-full animate-fade-up">
-            <div class="group bg-white rounded-[20px] p-5 flex items-center gap-4 shadow-sm border border-app-border border-l-4 border-l-primary-indigo relative overflow-hidden transition-all duration-300 ease-spring hover:-translate-y-1.5 hover:shadow-xl hover:border-primary-indigo/30">
-                <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-[22px] shrink-0 bg-primary-light text-primary-indigo shadow-inner transition-transform duration-300 ease-spring group-hover:scale-110 group-hover:rotate-6">📦</div>
+            <div
+                class="group bg-white rounded-[20px] p-5 flex items-center gap-4 shadow-sm border border-app-border border-l-4 border-l-primary-indigo relative overflow-hidden transition-all duration-300 ease-spring hover:-translate-y-1.5 hover:shadow-xl hover:border-primary-indigo/30">
+                <div
+                    class="w-12 h-12 rounded-2xl flex items-center justify-center text-[22px] shrink-0 bg-primary-light text-primary-indigo shadow-inner transition-transform duration-300 ease-spring group-hover:scale-110 group-hover:rotate-6">
+                    📦</div>
                 <div class="z-10 relative">
-                    <span class="text-[11px] font-extrabold text-txt-muted uppercase tracking-[0.6px] mb-0.5 block">Stok Fisik Brankas</span>
-                    <div id="summaryStokBrankas" class="text-[21px] font-extrabold text-txt-dark tracking-tight">0 Lembar</div>
+                    <span class="text-[11px] font-extrabold text-txt-muted uppercase tracking-[0.6px] mb-0.5 block">Stok
+                        Fisik Brankas</span>
+                    <div id="summaryStokBrankas" class="text-[21px] font-extrabold text-txt-dark tracking-tight">0
+                        Lembar</div>
                     <span id="summaryStokBrankasRp" class="text-[12.5px] font-bold text-txt-muted">Rp0</span>
                 </div>
-                <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-primary-indigo/10 rounded-full blur-xl pointer-events-none transition-all duration-300 group-hover:scale-150"></div>
+                <div
+                    class="absolute -right-4 -bottom-4 w-20 h-20 bg-primary-indigo/10 rounded-full blur-xl pointer-events-none transition-all duration-300 group-hover:scale-150">
+                </div>
             </div>
 
-            <div class="group bg-white rounded-[20px] p-5 flex items-center gap-4 shadow-sm border border-app-border border-l-4 border-l-accent-gold relative overflow-hidden transition-all duration-300 ease-spring hover:-translate-y-1.5 hover:shadow-xl hover:border-accent-gold/30">
-                <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-[22px] shrink-0 bg-accent-light text-accent-gold shadow-inner transition-transform duration-300 ease-spring group-hover:scale-110 group-hover:-rotate-6">🚚</div>
+            <div
+                class="group bg-white rounded-[20px] p-5 flex items-center gap-4 shadow-sm border border-app-border border-l-4 border-l-accent-gold relative overflow-hidden transition-all duration-300 ease-spring hover:-translate-y-1.5 hover:shadow-xl hover:border-accent-gold/30">
+                <div
+                    class="w-12 h-12 rounded-2xl flex items-center justify-center text-[22px] shrink-0 bg-accent-light text-accent-gold shadow-inner transition-transform duration-300 ease-spring group-hover:scale-110 group-hover:-rotate-6">
+                    🚚</div>
                 <div class="z-10 relative">
-                    <span class="text-[11px] font-extrabold text-txt-muted uppercase tracking-[0.6px] mb-0.5 block">Dibawa Pemohon (Intransit)</span>
-                    <div id="summaryStokIntransit" class="text-[21px] font-extrabold text-txt-dark tracking-tight">0 Lembar</div>
+                    <span
+                        class="text-[11px] font-extrabold text-txt-muted uppercase tracking-[0.6px] mb-0.5 block">Dibawa
+                        Pemohon (Intransit)</span>
+                    <div id="summaryStokIntransit" class="text-[21px] font-extrabold text-txt-dark tracking-tight">0
+                        Lembar</div>
                     <span id="summaryStokIntransitRp" class="text-[12.5px] font-bold text-txt-muted">Rp0</span>
                 </div>
-                <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-amber-500/10 rounded-full blur-xl pointer-events-none transition-all duration-300 group-hover:scale-150"></div>
+                <div
+                    class="absolute -right-4 -bottom-4 w-20 h-20 bg-amber-500/10 rounded-full blur-xl pointer-events-none transition-all duration-300 group-hover:scale-150">
+                </div>
             </div>
 
-            <div class="group bg-white rounded-[20px] p-5 flex items-center gap-4 shadow-sm border border-app-border border-l-4 border-l-success-emerald relative overflow-hidden transition-all duration-300 ease-spring hover:-translate-y-1.5 hover:shadow-xl hover:border-success-emerald/30">
-                <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-[22px] shrink-0 bg-success-light text-success-emerald shadow-inner transition-transform duration-300 ease-spring group-hover:scale-110 group-hover:rotate-6">🧾</div>
+            <div
+                class="group bg-white rounded-[20px] p-5 flex items-center gap-4 shadow-sm border border-app-border border-l-4 border-l-success-emerald relative overflow-hidden transition-all duration-300 ease-spring hover:-translate-y-1.5 hover:shadow-xl hover:border-success-emerald/30">
+                <div
+                    class="w-12 h-12 rounded-2xl flex items-center justify-center text-[22px] shrink-0 bg-success-light text-success-emerald shadow-inner transition-transform duration-300 ease-spring group-hover:scale-110 group-hover:rotate-6">
+                    🧾</div>
                 <div class="z-10 relative">
-                    <span class="text-[11px] font-extrabold text-txt-muted uppercase tracking-[0.6px] mb-0.5 block">Pengeluaran Riil (Ada LPJ)</span>
-                    <div id="summaryTotalTerpakai" class="text-[21px] font-extrabold text-txt-dark tracking-tight">0 Lembar</div>
+                    <span
+                        class="text-[11px] font-extrabold text-txt-muted uppercase tracking-[0.6px] mb-0.5 block">Pengeluaran
+                        Riil</span>
+                    <div id="summaryTotalTerpakai" class="text-[21px] font-extrabold text-txt-dark tracking-tight">0
+                        Lembar</div>
                     <span id="summaryTotalTerpakaiRp" class="text-[12.5px] font-bold text-txt-muted">Rp0</span>
                 </div>
-                <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-emerald-500/10 rounded-full blur-xl pointer-events-none transition-all duration-300 group-hover:scale-150"></div>
+                <div
+                    class="absolute -right-4 -bottom-4 w-20 h-20 bg-emerald-500/10 rounded-full blur-xl pointer-events-none transition-all duration-300 group-hover:scale-150">
+                </div>
             </div>
         </section>
 
@@ -352,11 +432,18 @@
         </section>
 
         <!-- MAIN PAGE SWITCHER (STICKY TAB DI MOBILE & DESKTOP) -->
-        <nav class="flex lg:hidden bg-white/90 backdrop-blur-xl border border-app-border rounded-[18px] p-1.5 mb-4 gap-1.5 shadow-md sticky top-[calc(8px+env(safe-area-inset-top))] z-[90] w-full" role="tablist" aria-label="Navigasi Halaman Utama Mobile">
-            <button class="flex-1 min-h-[44px] py-2 px-3.5 border-none rounded-[14px] bg-transparent text-[13px] font-bold text-txt-muted cursor-pointer transition-all duration-250 flex items-center justify-center gap-2 whitespace-nowrap [&.active]:bg-gradient-to-br [&.active]:from-brand-dark [&.active]:to-brand-navy [&.active]:text-white [&.active]:font-extrabold [&.active]:shadow-[0_4px_14px_rgba(15,23,42,0.25)] active" id="navBtnForm" role="tab" aria-selected="true" aria-controls="formPageSection" onclick="switchMainPage('formPage')">
+        <nav class="flex lg:hidden bg-white/90 backdrop-blur-xl border border-app-border rounded-[18px] p-1.5 mb-4 gap-1.5 shadow-md sticky top-[calc(8px+env(safe-area-inset-top))] z-[90] w-full"
+            role="tablist" aria-label="Navigasi Halaman Utama Mobile">
+            <button
+                class="flex-1 min-h-[44px] py-2 px-3.5 border-none rounded-[14px] bg-transparent text-[13px] font-bold text-txt-muted cursor-pointer transition-all duration-250 flex items-center justify-center gap-2 whitespace-nowrap [&.active]:bg-gradient-to-br [&.active]:from-brand-dark [&.active]:to-brand-navy [&.active]:text-white [&.active]:font-extrabold [&.active]:shadow-[0_4px_14px_rgba(15,23,42,0.25)] active"
+                id="navBtnForm" role="tab" aria-selected="true" aria-controls="formPageSection"
+                onclick="switchMainPage('formPage')">
                 📝 Input Transaksi
             </button>
-            <button class="flex-1 min-h-[44px] py-2 px-3.5 border-none rounded-[14px] bg-transparent text-[13px] font-bold text-txt-muted cursor-pointer transition-all duration-250 flex items-center justify-center gap-2 whitespace-nowrap [&.active]:bg-gradient-to-br [&.active]:from-brand-dark [&.active]:to-brand-navy [&.active]:text-white [&.active]:font-extrabold [&.active]:shadow-[0_4px_14px_rgba(15,23,42,0.25)]" id="navBtnTable" role="tab" aria-selected="false" aria-controls="tablePageSection" onclick="switchMainPage('tablePage')">
+            <button
+                class="flex-1 min-h-[44px] py-2 px-3.5 border-none rounded-[14px] bg-transparent text-[13px] font-bold text-txt-muted cursor-pointer transition-all duration-250 flex items-center justify-center gap-2 whitespace-nowrap [&.active]:bg-gradient-to-br [&.active]:from-brand-dark [&.active]:to-brand-navy [&.active]:text-white [&.active]:font-extrabold [&.active]:shadow-[0_4px_14px_rgba(15,23,42,0.25)]"
+                id="navBtnTable" role="tab" aria-selected="false" aria-controls="tablePageSection"
+                onclick="switchMainPage('tablePage')">
                 📊 Data & Laporan
             </button>
         </nav>
@@ -364,19 +451,32 @@
         <div class="grid grid-cols-1 lg:grid-cols-[410px_minmax(0,1fr)] gap-5 items-start w-full">
 
             <!-- PAGE 1: SIDEBAR FORM INPUT -->
-            <aside class="bg-white rounded-[22px] p-5 border border-app-border shadow-md min-w-0 lg:sticky lg:top-5 lg:max-h-[calc(100vh-40px)] lg:overflow-y-auto" id="formPageSection">
-                <div class="grid grid-cols-5 bg-slate-100 p-1 rounded-2xl mb-[18px] gap-0.5 border border-app-border w-full">
-                    <button class="w-full min-h-[42px] py-2 px-0.5 border-none bg-transparent text-[11.5px] font-bold text-txt-muted rounded-xl cursor-pointer transition-all duration-200 text-center whitespace-nowrap overflow-hidden text-ellipsis flex items-center justify-center tab-btn active [&.active]:bg-white [&.active]:text-primary-indigo [&.active]:shadow-[0_3px_10px_rgba(0,0,0,0.07)] [&.active]:font-extrabold" id="btnTab1" onclick="switchTab('tabNota')">📝 LPJ Nota</button>
-                    <button class="w-full min-h-[42px] py-2 px-0.5 border-none bg-transparent text-[11.5px] font-bold text-txt-muted rounded-xl cursor-pointer transition-all duration-200 text-center whitespace-nowrap overflow-hidden text-ellipsis flex items-center justify-center tab-btn [&.active]:bg-white [&.active]:text-primary-indigo [&.active]:shadow-[0_3px_10px_rgba(0,0,0,0.07)] [&.active]:font-extrabold" id="btnTab2" onclick="switchTab('tabPemohon')">🤝 Serah</button>
-                    <button class="w-full min-h-[42px] py-2 px-0.5 border-none bg-transparent text-[11.5px] font-bold text-txt-muted rounded-xl cursor-pointer transition-all duration-200 text-center whitespace-nowrap overflow-hidden text-ellipsis flex items-center justify-center tab-btn [&.active]:bg-white [&.active]:text-primary-indigo [&.active]:shadow-[0_3px_10px_rgba(0,0,0,0.07)] [&.active]:font-extrabold" id="btnTab3" onclick="switchTab('tabRetur')">↩️ Retur</button>
-                    <button class="w-full min-h-[42px] py-2 px-0.5 border-none bg-transparent text-[11.5px] font-bold text-txt-muted rounded-xl cursor-pointer transition-all duration-200 text-center whitespace-nowrap overflow-hidden text-ellipsis flex items-center justify-center tab-btn [&.active]:bg-white [&.active]:text-primary-indigo [&.active]:shadow-[0_3px_10px_rgba(0,0,0,0.07)] [&.active]:font-extrabold" id="btnTab4" onclick="switchTab('tabPembelian')">🛍️ Pasokan</button>
-                    <button class="w-full min-h-[42px] py-2 px-0.5 border-none bg-transparent text-[11.5px] font-bold text-txt-muted rounded-xl cursor-pointer transition-all duration-200 text-center whitespace-nowrap overflow-hidden text-ellipsis flex items-center justify-center tab-btn highlight-tab [&.active]:bg-brand-dark [&.active]:text-white [&.active]:shadow-[0_3px_10px_rgba(0,0,0,0.07)] [&.active]:font-extrabold" id="btnTab5" onclick="switchTab('tabOpname')">📋 Opname</button>
+            <aside
+                class="bg-white rounded-[22px] p-5 border border-app-border shadow-md min-w-0 lg:sticky lg:top-5 lg:max-h-[calc(100vh-40px)] lg:overflow-y-auto"
+                id="formPageSection">
+                <div
+                    class="grid grid-cols-5 bg-slate-100 p-1 rounded-2xl mb-[18px] gap-0.5 border border-app-border w-full">
+                    <button
+                        class="w-full min-h-[42px] py-2 px-0.5 border-none bg-transparent text-[11.5px] font-bold text-txt-muted rounded-xl cursor-pointer transition-all duration-200 text-center whitespace-nowrap overflow-hidden text-ellipsis flex items-center justify-center tab-btn active [&.active]:bg-white [&.active]:text-primary-indigo [&.active]:shadow-[0_3px_10px_rgba(0,0,0,0.07)] [&.active]:font-extrabold"
+                        id="btnTab1" onclick="switchTab('tabNota')">📝 Nota</button>
+                    <button
+                        class="w-full min-h-[42px] py-2 px-0.5 border-none bg-transparent text-[11.5px] font-bold text-txt-muted rounded-xl cursor-pointer transition-all duration-200 text-center whitespace-nowrap overflow-hidden text-ellipsis flex items-center justify-center tab-btn [&.active]:bg-white [&.active]:text-primary-indigo [&.active]:shadow-[0_3px_10px_rgba(0,0,0,0.07)] [&.active]:font-extrabold"
+                        id="btnTab2" onclick="switchTab('tabPemohon')">🤝 Serah</button>
+                    <button
+                        class="w-full min-h-[42px] py-2 px-0.5 border-none bg-transparent text-[11.5px] font-bold text-txt-muted rounded-xl cursor-pointer transition-all duration-200 text-center whitespace-nowrap overflow-hidden text-ellipsis flex items-center justify-center tab-btn [&.active]:bg-white [&.active]:text-primary-indigo [&.active]:shadow-[0_3px_10px_rgba(0,0,0,0.07)] [&.active]:font-extrabold"
+                        id="btnTab3" onclick="switchTab('tabRetur')">↩️ Retur</button>
+                    <button
+                        class="w-full min-h-[42px] py-2 px-0.5 border-none bg-transparent text-[11.5px] font-bold text-txt-muted rounded-xl cursor-pointer transition-all duration-200 text-center whitespace-nowrap overflow-hidden text-ellipsis flex items-center justify-center tab-btn [&.active]:bg-white [&.active]:text-primary-indigo [&.active]:shadow-[0_3px_10px_rgba(0,0,0,0.07)] [&.active]:font-extrabold"
+                        id="btnTab4" onclick="switchTab('tabPembelian')">🛍️ Pasokan</button>
+                    <button
+                        class="w-full min-h-[42px] py-2 px-0.5 border-none bg-transparent text-[11.5px] font-bold text-txt-muted rounded-xl cursor-pointer transition-all duration-200 text-center whitespace-nowrap overflow-hidden text-ellipsis flex items-center justify-center tab-btn highlight-tab [&.active]:bg-brand-dark [&.active]:text-white [&.active]:shadow-[0_3px_10px_rgba(0,0,0,0.07)] [&.active]:font-extrabold"
+                        id="btnTab5" onclick="switchTab('tabOpname')">📋 Opname</button>
                 </div>
 
                 <!-- FORM 1: NOTA SPBU (LPJ) -->
                 <div id="tabNota" class="panel-content active">
                     <div class="panel-title">
-                        <h3>Input Nota BBM SPBU (LPJ)</h3>
+                        <h3>Input Nota BBM SPBU</h3>
                         <p>Unggah foto nota SPBU & atur jumlah voucher fisik yang digunakan.</p>
                     </div>
 
@@ -392,7 +492,8 @@
                             <label class="upload-label">📸 Scan Nota Fisik SPBU</label>
                             <div class="upload-btn-group">
                                 <label for="fileNotaKamera" class="btn-action secondary">📷 Ambil Foto</label>
-                                <input type="file" id="fileNotaKamera" accept="image/*" capture="environment" style="display: none;">
+                                <input type="file" id="fileNotaKamera" accept="image/*" capture="environment"
+                                    style="display: none;">
 
                                 <label for="fileNota" class="btn-action outline">📁 Pilih Galeri</label>
                                 <input type="file" id="fileNota" accept="image/*" style="display: none;">
@@ -506,7 +607,8 @@
                         </div>
                         <div class="form-group">
                             <label for="alasanRetur">📝 Alasan Pengembalian</label>
-                            <input type="text" id="alasanRetur" placeholder="Contoh: Tugas Luar Batal / Sisa Operasional" required>
+                            <input type="text" id="alasanRetur"
+                                placeholder="Contoh: Tugas Luar Batal / Sisa Operasional" required>
                         </div>
                         <button type="submit" class="btn-success full-width">↩️ Kembalikan ke Brankas</button>
                     </form>
@@ -556,7 +658,8 @@
                 <div id="tabOpname" class="panel-content" style="display: none;">
                     <div class="panel-title">
                         <h3>📋 Menu Stok Opname Fisik Kupon</h3>
-                        <p>Penghitungan fisik fisik voucher kertas brankas secara langsung & pencatatan selisih audit.</p>
+                        <p>Penghitungan fisik fisik voucher kertas brankas secara langsung & pencatatan selisih audit.
+                        </p>
                     </div>
 
                     <form id="formStokOpname" class="app-form">
@@ -574,10 +677,12 @@
 
                         <div class="form-group">
                             <label for="keteranganOpname">📝 Berita Acara / Keterangan Audit</label>
-                            <input type="text" id="keteranganOpname" placeholder="Contoh: Opname Rutin Bulanan Agustus / Penyeimbangan Fisik" required>
+                            <input type="text" id="keteranganOpname"
+                                placeholder="Contoh: Opname Rutin Bulanan Agustus / Penyeimbangan Fisik" required>
                         </div>
 
-                        <button type="submit" class="btn-primary full-width" style="background: linear-gradient(135deg, #0f172a 0%, #334155 100%);">
+                        <button type="submit" class="btn-primary full-width"
+                            style="background: linear-gradient(135deg, #0f172a 0%, #334155 100%);">
                             📊 Simpan Hasil Stok Opname & Sesuaikan Stok
                         </button>
                     </form>
@@ -606,12 +711,17 @@
                     <div class="filter-bar">
                         <div class="filter-header-bar">
                             <div class="filter-presets">
-                                <button type="button" class="preset-btn active" id="btnPresetSemua" onclick="setQuickDateFilter('semua')">📅 Semua Data</button>
-                                <button type="button" class="preset-btn" id="btnPresetToday" onclick="setQuickDateFilter('today')">⚡ Hari Ini</button>
-                                <button type="button" class="preset-btn" id="btnPresetThisMonth" onclick="setQuickDateFilter('thisMonth')">🗓️ Bulan Ini</button>
-                                <button type="button" class="preset-btn" id="btnPresetLastMonth" onclick="setQuickDateFilter('lastMonth')">⏮️ Bulan Lalu</button>
+                                <button type="button" class="preset-btn active" id="btnPresetSemua"
+                                    onclick="setQuickDateFilter('semua')">📅 Semua Data</button>
+                                <button type="button" class="preset-btn" id="btnPresetToday"
+                                    onclick="setQuickDateFilter('today')">⚡ Hari Ini</button>
+                                <button type="button" class="preset-btn" id="btnPresetThisMonth"
+                                    onclick="setQuickDateFilter('thisMonth')">🗓️ Bulan Ini</button>
+                                <button type="button" class="preset-btn" id="btnPresetLastMonth"
+                                    onclick="setQuickDateFilter('lastMonth')">⏮️ Bulan Lalu</button>
                             </div>
-                            <button type="button" class="btn-reset-filter" onclick="resetAllFilters()">🧹 Reset Filter</button>
+                            <button type="button" class="btn-reset-filter" onclick="resetAllFilters()">🧹 Reset
+                                Filter</button>
                         </div>
 
                         <div class="filter-row-inputs">
@@ -665,11 +775,16 @@
                             </tbody>
                             <tfoot id="tabelFoot">
                                 <tr class="table-summary-row">
-                                    <td colspan="5" style="text-align:right; font-weight:800; font-size:13px; color:#1e293b;">📊 TOTAL SUMMARY FILTER:</td>
-                                    <td class="text-center" id="filterTotalKupon" style="font-weight:800; color:#312e81; font-size:14px;">0 lbr</td>
-                                    <td class="text-right" id="filterTotalRp" style="font-weight:800; color:#059669; font-size:14px;">Rp0</td>
+                                    <td colspan="5"
+                                        style="text-align:right; font-weight:800; font-size:13px; color:#1e293b;">📊
+                                        TOTAL SUMMARY FILTER:</td>
+                                    <td class="text-center" id="filterTotalKupon"
+                                        style="font-weight:800; color:#312e81; font-size:14px;">0 lbr</td>
+                                    <td class="text-right" id="filterTotalRp"
+                                        style="font-weight:800; color:#059669; font-size:14px;">Rp0</td>
                                     <td colspan="2" class="text-center">
-                                        <button type="button" class="btn-scroll-top" onclick="scrollToFilterMenu()" title="Kembali Ke Menu Filter Atas">
+                                        <button type="button" class="btn-scroll-top" onclick="scrollToFilterMenu()"
+                                            title="Kembali Ke Menu Filter Atas">
                                             <span>⬆️</span> <span class="btn-text">Ke Filter</span>
                                         </button>
                                     </td>
@@ -685,7 +800,9 @@
                         <span>💡</span>
                         <div>
                             <strong>Monitoring Kupon Intransit (Pegawai Holding Audit)</strong>
-                            <p>Daftar voucher kertas yang dibawa pegawai dan belum LPJ. Lampiran >3 hari berwarna <span style="color:#d97706; font-weight:800;">Kuning</span>, dan >7 hari berwarna <span style="color:#e11d48; font-weight:800;">Merah</span>.</p>
+                            <p>Daftar voucher kertas yang dibawa pegawai dan belum LPJ. Lampiran >3 hari berwarna <span
+                                    style="color:#d97706; font-weight:800;">Kuning</span>, dan >7 hari berwarna <span
+                                    style="color:#e11d48; font-weight:800;">Merah</span>.</p>
                         </div>
                     </div>
 
@@ -737,7 +854,8 @@
                         <span>📜</span>
                         <div>
                             <strong>Log Riwayat Stok Opname Fisik Brankas</strong>
-                            <p>Catatan histori hasil audit fisik kupon kertas yang pernah dilaksanakan di KPPD Bantul.</p>
+                            <p>Catatan histori hasil audit fisik kupon kertas yang pernah dilaksanakan di KPPD Bantul.
+                            </p>
                         </div>
                     </div>
 
