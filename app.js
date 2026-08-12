@@ -97,14 +97,12 @@ function showMainApp() {
 
 function handleAuthError() {
     clearAuthToken();
-    try { localStorage.removeItem('bbm_cached_db'); } catch (e) { }
     showLoginScreen();
     showToast('⚠️ Sesi habis, silakan login kembali.', 'warning');
 }
 
 function handleLogout() {
     clearAuthToken();
-    try { localStorage.removeItem('bbm_cached_db'); } catch (e) { }
     showLoginScreen();
     showToast('🚪 Anda telah keluar dari sistem.', 'info');
 }
@@ -316,6 +314,11 @@ async function fetchWithAuth(payload, maxRetries = 2, timeoutMs = 15000, isQueue
             if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
 
             const data = await res.json();
+
+            if (data && data.status === 'error' && data.message && data.message.includes('Server sedang sibuk')) {
+                throw new Error(data.message);
+            }
+
             setNetworkStatus('online');
 
             if (data && data.status === 'auth_error') {
@@ -611,7 +614,24 @@ function muatCacheLokalData() {
     return false;
 }
 
-function muatDataDariSpreadsheet(showSkeleton = true) {
+let isSyncingData = false;
+
+function updateSyncButtonState(isSyncing) {
+    const btn = document.getElementById('btnSyncCloud');
+    const icon = document.getElementById('iconSyncCloud');
+    if (!btn || !icon) return;
+    if (isSyncing) {
+        btn.disabled = true;
+        btn.classList.add('opacity-75', 'cursor-not-allowed');
+        icon.classList.add('animate-spin');
+    } else {
+        btn.disabled = false;
+        btn.classList.remove('opacity-75', 'cursor-not-allowed');
+        icon.classList.remove('animate-spin');
+    }
+}
+
+async function muatDataDariSpreadsheet(showSkeleton = true) {
     if (!SPREADSHEET_WEBAPP_URL) return;
 
     // Load from local cache immediately (Stale-While-Revalidate)
@@ -628,24 +648,36 @@ function muatDataDariSpreadsheet(showSkeleton = true) {
         tampilkanSkeletonLoading();
     }
 
+    if (isSyncingData) return;
+    isSyncingData = true;
+
     setNetworkStatus('syncing', 'Menyinkronkan...');
+    updateSyncButtonState(true);
 
-    const fetchUrl = SPREADSHEET_WEBAPP_URL + "?nocache=" + new Date().getTime() + "&token=" + encodeURIComponent(getAuthToken());
+    const maxRetries = 2;
+    let attempt = 0;
+    let success = false;
+    let lastError = null;
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    while (attempt <= maxRetries && !success) {
+        const fetchUrl = SPREADSHEET_WEBAPP_URL + "?nocache=" + new Date().getTime() + "&token=" + encodeURIComponent(getAuthToken());
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 20000);
 
-    fetch(fetchUrl, { signal: controller.signal })
-        .then(async res => {
+        try {
+            const res = await fetch(fetchUrl, { signal: controller.signal });
             clearTimeout(timeoutId);
+
             if (!res.ok) throw new Error("HTTP Error " + res.status);
-            return res.json();
-        })
-        .then(data => {
+            const data = await res.json();
+
             if (data && data.status === 'auth_error') {
                 handleAuthError();
+                isSyncingData = false;
+                updateSyncButtonState(false);
                 return;
             }
+
             if (data) {
                 databaseNota = data.nota || [];
                 databaseIntransit = data.intransit || [];
@@ -654,6 +686,8 @@ function muatDataDariSpreadsheet(showSkeleton = true) {
                 databaseOpname = data.opname || [];
                 simpanCacheLokalData();
             }
+
+            success = true;
             setNetworkStatus('online', 'Sistem Online');
             populateDropdownIntransit();
             renderTabel();
@@ -664,20 +698,34 @@ function muatDataDariSpreadsheet(showSkeleton = true) {
             hitungDanRenderSummary();
 
             prosesOfflineQueue();
-        })
-        .catch(err => {
+        } catch (err) {
             clearTimeout(timeoutId);
-            console.error("Gagal sinkronisasi cloud:", err);
-            setNetworkStatus('offline', 'Mode Offline');
-            if (!hasCache) {
-                renderTabel();
-                renderTabelIntransit();
-                renderTabelPembelian();
-                renderTabelOpname();
-                renderOpnameFormInputs();
-                hitungDanRenderSummary();
+            attempt++;
+            lastError = err;
+            console.warn(`[Sync Cloud Retry] Attempt ${attempt}/${maxRetries} failed:`, err.message || err);
+
+            if (attempt <= maxRetries) {
+                setNetworkStatus('syncing', `Mencoba lagi (${attempt}/${maxRetries})...`);
+                await new Promise(r => setTimeout(r, attempt * 1000));
             }
-        });
+        }
+    }
+
+    if (!success) {
+        console.error("Gagal sinkronisasi cloud:", lastError);
+        setNetworkStatus('offline', 'Mode Offline');
+        if (!hasCache) {
+            renderTabel();
+            renderTabelIntransit();
+            renderTabelPembelian();
+            renderTabelOpname();
+            renderOpnameFormInputs();
+            hitungDanRenderSummary();
+        }
+    }
+
+    isSyncingData = false;
+    updateSyncButtonState(false);
 }
 
 function switchTab(tabId) {
@@ -2066,8 +2114,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 .then(data => {
                     if (data && data.status === 'success' && data.token) {
                         setAuthToken(data.token);
+                        if (data.nota) {
+                            databaseNota = data.nota || [];
+                            databaseIntransit = data.intransit || [];
+                            databaseSaldoAwal = data.saldoAwal || [];
+                            databasePembelian = data.pembelian || [];
+                            databaseOpname = data.opname || [];
+                            simpanCacheLokalData();
+                        }
                         showMainApp();
-                        muatDataDariSpreadsheet();
+                        if (data.nota) {
+                            setNetworkStatus('online', 'Sistem Online');
+                            populateDropdownIntransit();
+                            renderTabel();
+                            renderTabelIntransit();
+                            renderTabelPembelian();
+                            renderTabelOpname();
+                            renderOpnameFormInputs();
+                            hitungDanRenderSummary();
+                            prosesOfflineQueue();
+                        } else {
+                            muatDataDariSpreadsheet();
+                        }
                         showToast('Login berhasil! Selamat datang.', 'success');
                     } else {
                         if (errorDiv) {
