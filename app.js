@@ -48,22 +48,57 @@ function getLocalDateYMD(date) {
 }
 
 // ============================================================
-// AUTH SESSION MANAGEMENT
+// AUTH & PERSISTENT DEVICE CREDENTIALS MANAGEMENT (PWA AUTOLOGIN)
 // ============================================================
 function getAuthToken() {
-    return sessionStorage.getItem('bbm_auth_token') || '';
+    return localStorage.getItem('bbm_auth_token') || sessionStorage.getItem('bbm_auth_token') || '';
 }
 
 function setAuthToken(token) {
-    sessionStorage.setItem('bbm_auth_token', token);
+    if (token) {
+        localStorage.setItem('bbm_auth_token', token);
+        sessionStorage.setItem('bbm_auth_token', token);
+    }
+}
+
+function getSavedPassword() {
+    return localStorage.getItem('bbm_saved_pwd') || '';
+}
+
+function setSavedPassword(password) {
+    if (password) {
+        localStorage.setItem('bbm_saved_pwd', password);
+    }
 }
 
 function clearAuthToken() {
+    localStorage.removeItem('bbm_auth_token');
     sessionStorage.removeItem('bbm_auth_token');
+    localStorage.removeItem('bbm_saved_pwd');
 }
 
 function isLoggedIn() {
-    return !!getAuthToken();
+    return !!getAuthToken() || !!getSavedPassword();
+}
+
+async function silentAutoRelogin() {
+    const savedPwd = getSavedPassword();
+    if (!savedPwd || !SPREADSHEET_WEBAPP_URL) return false;
+    try {
+        const res = await fetch(SPREADSHEET_WEBAPP_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'login', password: savedPwd })
+        });
+        const data = await res.json();
+        if (data && data.status === 'success' && data.token) {
+            setAuthToken(data.token);
+            return true;
+        }
+    } catch (e) {
+        console.warn('[Auto-Login] Silent relogin failed:', e);
+    }
+    return false;
 }
 
 function showLoginScreen() {
@@ -71,6 +106,12 @@ function showLoginScreen() {
     const main = document.getElementById('mainContainer');
     if (login) login.style.display = 'flex';
     if (main) main.style.display = 'none';
+
+    // Auto-fill password input if previously saved on device
+    const pwdInput = document.getElementById('loginPassword');
+    if (pwdInput && getSavedPassword()) {
+        pwdInput.value = getSavedPassword();
+    }
 }
 
 function handleUrlShortcutAction() {
@@ -95,7 +136,12 @@ function showMainApp() {
     handleUrlShortcutAction();
 }
 
-function handleAuthError() {
+async function handleAuthError() {
+    const reloginOk = await silentAutoRelogin();
+    if (reloginOk) {
+        muatDataDariSpreadsheet(false);
+        return;
+    }
     clearAuthToken();
     showLoginScreen();
     showToast('⚠️ Sesi habis, silakan login kembali.', 'warning');
@@ -103,6 +149,8 @@ function handleAuthError() {
 
 function handleLogout() {
     clearAuthToken();
+    const pwdInput = document.getElementById('loginPassword');
+    if (pwdInput) pwdInput.value = '';
     showLoginScreen();
     showToast('🚪 Anda telah keluar dari sistem.', 'info');
 }
@@ -238,7 +286,7 @@ function setNetworkStatus(status, customText = null) {
 function enqueueOfflineAction(payload) {
     try {
         const queue = JSON.parse(localStorage.getItem('bbm_offline_queue') || '[]');
-        
+
         // Deduplikasi: jika aksi yang sama untuk entri/no yang sama sudah ada, perbarui daripada menambah duplikat
         const existingIdx = queue.findIndex(q => {
             if (!q.payload || q.payload.action !== payload.action) return false;
@@ -343,6 +391,18 @@ async function fetchWithAuth(payload, maxRetries = 2, timeoutMs = 15000, isQueue
             setNetworkStatus('online');
 
             if (data && data.status === 'auth_error') {
+                const reloginOk = await silentAutoRelogin();
+                if (reloginOk) {
+                    payload.token = getAuthToken();
+                    const retryRes = await fetch(SPREADSHEET_WEBAPP_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (retryRes.ok) {
+                        return await retryRes.json();
+                    }
+                }
                 handleAuthError();
                 return null;
             }
@@ -693,6 +753,11 @@ async function muatDataDariSpreadsheet(showSkeleton = true) {
             const data = await res.json();
 
             if (data && data.status === 'auth_error') {
+                const reloginOk = await silentAutoRelogin();
+                if (reloginOk) {
+                    attempt++;
+                    continue;
+                }
                 handleAuthError();
                 isSyncingData = false;
                 updateSyncButtonState(false);
@@ -1620,11 +1685,11 @@ function eksekusiHapus() {
         databaseNota.splice(index, 1);
 
         if (SPREADSHEET_WEBAPP_URL) {
-            fetchWithAuth({ 
-                action: 'hapus_nota', 
-                no: item.no, 
-                noTransaksi: item.no, 
-                rowIndex: item.rowIndex || (index + 2) 
+            fetchWithAuth({
+                action: 'hapus_nota',
+                no: item.no,
+                noTransaksi: item.no,
+                rowIndex: item.rowIndex || (index + 2)
             }).then(() => muatDataDariSpreadsheet(false));
         }
 
@@ -2185,6 +2250,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 .then(data => {
                     if (data && data.status === 'success' && data.token) {
                         setAuthToken(data.token);
+                        setSavedPassword(password); // Simpan password aman di perangkat untuk auto-login
                         if (data.nota) {
                             databaseNota = data.nota || [];
                             databaseIntransit = data.intransit || [];
@@ -2207,7 +2273,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         } else {
                             muatDataDariSpreadsheet();
                         }
-                        showToast('Login berhasil! Selamat datang.', 'success');
+                        showToast('Login berhasil! Password disimpan di perangkat.', 'success');
                     } else {
                         if (errorDiv) {
                             errorDiv.textContent = (data && data.message) ? data.message : 'Password salah!';
@@ -2230,9 +2296,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ============ SESSION CHECK ON PAGE LOAD ============
-    if (isLoggedIn()) {
+    // ============ PERSISTENT SESSION & AUTO-LOGIN CHECK ON PAGE LOAD ============
+    const savedPasswordOnDevice = getSavedPassword();
+    const currentActiveToken = getAuthToken();
+
+    if (currentActiveToken || savedPasswordOnDevice) {
         showMainApp();
+        const pwdInput = document.getElementById('loginPassword');
+        if (pwdInput && savedPasswordOnDevice) {
+            pwdInput.value = savedPasswordOnDevice;
+        }
         muatDataDariSpreadsheet();
     } else {
         showLoginScreen();
@@ -2309,11 +2382,11 @@ document.addEventListener('DOMContentLoaded', () => {
             item.pemohon = document.getElementById('editNamaPemohon').value.trim();
 
             if (SPREADSHEET_WEBAPP_URL) {
-                fetchWithAuth({ 
-                    action: 'edit_nota', 
-                    originalNo: originalNo, 
-                    rowIndex: item.rowIndex || (index + 2), 
-                    ...item 
+                fetchWithAuth({
+                    action: 'edit_nota',
+                    originalNo: originalNo,
+                    rowIndex: item.rowIndex || (index + 2),
+                    ...item
                 }).then(() => muatDataDariSpreadsheet(false));
             }
 
