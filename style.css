@@ -849,21 +849,44 @@ input:focus, select:focus {
 
 .filter-row-inputs {
     display: grid;
-    grid-template-columns: minmax(130px, 1fr) minmax(130px, 1fr) minmax(160px, 1.2fr) minmax(210px, 1.6fr) minmax(160px, 1.2fr);
+    grid-template-columns: minmax(135px, 1fr) minmax(135px, 1fr) minmax(170px, 1.2fr) minmax(200px, 1.6fr) minmax(185px, 1.3fr);
     gap: 12px;
     align-items: flex-end;
     width: 100%;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1320px) {
     .filter-row-inputs {
         grid-template-columns: repeat(3, 1fr);
     }
+    .filter-item.item-search {
+        grid-column: span 2;
+    }
+    .filter-item.item-sort {
+        grid-column: span 1;
+    }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
+    .filter-row-inputs {
+        grid-template-columns: 1fr 1fr;
+    }
+    .filter-item.item-select,
+    .filter-item.item-search,
+    .filter-item.item-sort {
+        grid-column: span 2;
+    }
+}
+
+@media (max-width: 480px) {
     .filter-row-inputs {
         grid-template-columns: 1fr;
+    }
+    .filter-item.item-date,
+    .filter-item.item-search,
+    .filter-item.item-select,
+    .filter-item.item-sort {
+        grid-column: span 1;
     }
 }
 
@@ -892,26 +915,27 @@ input:focus, select:focus {
 
 .filter-item input[type="date"],
 .filter-item input[type="text"],
-.filter-item select {
+.filter-item select,
+.filter-item .custom-select-trigger {
     height: 46px !important;
     min-height: 46px !important;
     max-height: 46px !important;
-    padding: 0 14px;
-    border-radius: 12px;
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--text-dark);
-    background-color: #ffffff;
-    border: 1.5px solid #cbd5e1;
-    box-shadow: 0 2px 4px rgba(15, 23, 42, 0.03);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    width: 100%;
+    padding: 0 14px !important;
+    border-radius: 12px !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: var(--text-dark) !important;
+    background-color: #ffffff !important;
+    border: 1.5px solid #cbd5e1 !important;
+    box-shadow: 0 2px 4px rgba(15, 23, 42, 0.03) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    width: 100% !important;
 }
 
 .filter-item select {
-    padding-right: 36px;
+    padding-right: 36px !important;
     background-position: right 12px center;
     background-size: 14px;
 }
@@ -1440,12 +1464,13 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 .custom-select-trigger {
     width: 100%;
     min-height: 46px;
-    padding: 11px 16px;
+    height: 46px;
+    padding: 0 14px;
     border: 1.5px solid #cbd5e1;
-    border-radius: 14px;
+    border-radius: 12px;
     background-color: #ffffff;
     color: var(--text-dark);
-    font-size: 13.5px;
+    font-size: 13px;
     font-weight: 700;
     cursor: pointer;
     display: flex;
@@ -1454,6 +1479,8 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     box-shadow: 0 2px 5px rgba(15, 23, 42, 0.04);
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     user-select: none;
+    white-space: nowrap;
+    overflow: hidden;
 }
 
 .custom-select-trigger:hover {
@@ -1467,10 +1494,22 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     background-color: #ffffff;
 }
 
+.custom-select-trigger-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-right: 8px;
+    flex: 1;
+    text-align: left;
+    display: block;
+}
+
 .custom-select-arrow {
-    font-size: 11px;
+    font-size: 10px;
     color: var(--primary-indigo);
     transition: transform 0.2s ease;
+    flex-shrink: 0;
+    margin-left: auto;
 }
 
 .custom-select-wrapper.open .custom-select-arrow {

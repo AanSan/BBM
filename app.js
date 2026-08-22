@@ -234,11 +234,25 @@ function setNetworkStatus(status, customText = null) {
     }
 }
 
-// Queue offline requests
+// Queue offline requests (with deduplication)
 function enqueueOfflineAction(payload) {
     try {
         const queue = JSON.parse(localStorage.getItem('bbm_offline_queue') || '[]');
-        queue.push({ payload, timestamp: Date.now() });
+        
+        // Deduplikasi: jika aksi yang sama untuk entri/no yang sama sudah ada, perbarui daripada menambah duplikat
+        const existingIdx = queue.findIndex(q => {
+            if (!q.payload || q.payload.action !== payload.action) return false;
+            if (payload.no && q.payload.no === payload.no) return true;
+            if (payload.id && q.payload.id === payload.id) return true;
+            return false;
+        });
+
+        if (existingIdx !== -1) {
+            queue[existingIdx] = { payload, timestamp: Date.now() };
+        } else {
+            queue.push({ payload, timestamp: Date.now() });
+        }
+
         localStorage.setItem('bbm_offline_queue', JSON.stringify(queue));
         showToast("⚠️ Koneksi terputus. Data disimpan di antrean offline HP Anda.", "warning");
         setNetworkStatus('offline', 'Data Pending (Offline)');
@@ -247,13 +261,18 @@ function enqueueOfflineAction(payload) {
     }
 }
 
+let isProcessingOfflineQueue = false;
+
 // Process offline queue when online
 async function prosesOfflineQueue() {
-    if (!navigator.onLine || !SPREADSHEET_WEBAPP_URL) return;
+    if (!navigator.onLine || !SPREADSHEET_WEBAPP_URL || isProcessingOfflineQueue) return;
     try {
-        const queue = JSON.parse(localStorage.getItem('bbm_offline_queue') || '[]');
+        const rawQueue = localStorage.getItem('bbm_offline_queue');
+        if (!rawQueue) return;
+        const queue = JSON.parse(rawQueue || '[]');
         if (queue.length === 0) return;
 
+        isProcessingOfflineQueue = true;
         setNetworkStatus('syncing', `Menyinkronkan (${queue.length})...`);
         let successCount = 0;
         const remainingQueue = [];
@@ -282,6 +301,8 @@ async function prosesOfflineQueue() {
         }
     } catch (e) {
         console.error("Gagal memproses offline queue:", e);
+    } finally {
+        isProcessingOfflineQueue = false;
     }
 }
 
@@ -1532,11 +1553,14 @@ function tutupModalFoto() {
 }
 
 // ============================================================
-// MODAL EDIT NOTA
+// MODAL EDIT NOTA (ID-BASED WITH ORIGINAL NO PRESERVATION)
 // ============================================================
+let editNotaOriginalNo = "";
+
 function bukaEditNota(index) {
     const item = databaseNota[index];
     if (!item) return;
+    editNotaOriginalNo = item.no || '';
     document.getElementById('editNotaRowIndex').value = index;
     document.getElementById('editNoTransaksi').value = item.no || '';
     document.getElementById('editTanggalNota').value = item.tanggal || '';
@@ -1563,12 +1587,12 @@ function tutupModalEdit() {
 }
 
 // ============================================================
-// MODAL HAPUS NOTA
+// MODAL HAPUS NOTA (ID-BASED)
 // ============================================================
 function konfirmasiHapusNota(index) {
     const item = databaseNota[index];
     if (!item) return;
-    pendingDeleteAction = { type: 'nota', index: index, item: item };
+    pendingDeleteAction = { type: 'nota', index: index, item: item, no: item.no };
     const msg = document.getElementById('confirmDeleteMsg');
     if (msg) msg.innerText = `Apakah Anda yakin ingin menghapus Nota ${item.no || ''} (${item.plat}) seharga Rp${(item.total || 0).toLocaleString('id-ID')}?`;
     const modal = document.getElementById('confirmDeleteModal');
@@ -1596,8 +1620,12 @@ function eksekusiHapus() {
         databaseNota.splice(index, 1);
 
         if (SPREADSHEET_WEBAPP_URL) {
-            fetchWithAuth({ action: 'hapus_nota', rowIndex: item.rowIndex || (index + 2) })
-                .then(() => muatDataDariSpreadsheet());
+            fetchWithAuth({ 
+                action: 'hapus_nota', 
+                no: item.no, 
+                noTransaksi: item.no, 
+                rowIndex: item.rowIndex || (index + 2) 
+            }).then(() => muatDataDariSpreadsheet(false));
         }
 
         showToast("🗑️ Data Nota berhasil dihapus", "info");
@@ -1848,7 +1876,7 @@ function setupTableFilterListeners() {
 }
 
 // ============================================================
-// CETAK BERITA ACARA REKONSILIASI
+// CETAK BERITA ACARA REKONSILIASI (SYNCHRONIZED METRICS)
 // ============================================================
 function bukaModalCetakBA() {
     const modal = document.getElementById('printBAModal');
@@ -1869,21 +1897,64 @@ function bukaModalCetakBA() {
 
     BBM_TYPES.forEach((t, i) => {
         const key = matchBbmKey(t.name);
-        const data = stokMap[key] || { kupon: 0, rp: 0 };
-        const kuponFisik = Math.max(0, data.kupon);
+
+        // 1. Saldo Awal
+        let saldoAwalKupon = 0;
+        if (databaseSaldoAwal && Array.isArray(databaseSaldoAwal)) {
+            databaseSaldoAwal.forEach(item => {
+                if (matchBbmKey(item.barang) === key) {
+                    saldoAwalKupon += Number(item.kupon) || 0;
+                }
+            });
+        }
+
+        // 2. Pembelian
+        let beliKupon = 0;
+        if (databasePembelian && Array.isArray(databasePembelian)) {
+            databasePembelian.forEach(item => {
+                if (matchBbmKey(item.barang) === key) {
+                    beliKupon += Number(item.kupon) || 0;
+                }
+            });
+        }
+
+        // 3. LPJ Terpakai
+        let lpjKupon = 0;
+        databaseNota.forEach(item => {
+            if (matchBbmKey(item.bbm) === key) {
+                let jml = Number(item.kupon);
+                if (!jml || isNaN(jml)) jml = Math.floor((Number(item.total) || 0) / t.nominalKupon) || 1;
+                lpjKupon += jml;
+            }
+        });
+
+        // 4. Intransit
+        let intransitKupon = 0;
+        databaseIntransit.forEach(item => {
+            if ((item.status === "PENDING" || !item.status) && matchBbmKey(item.bbm) === key) {
+                intransitKupon += Number(item.kupon) || 0;
+            }
+        });
+
+        const stokData = stokMap[key] || { kupon: 0, rp: 0 };
+        const kuponFisik = Math.max(0, stokData.kupon);
         const totalFisikRp = kuponFisik * t.nominalKupon;
         grandFisikRp += totalFisikRp;
+
+        const saldoPlusBeli = saldoAwalKupon + beliKupon;
+        const hitungTeoritis = saldoPlusBeli - lpjKupon - intransitKupon;
+        const selisihKupon = kuponFisik - hitungTeoritis;
 
         htmlAccumulator += `
             <tr>
                 <td style="text-align:center;">${i + 1}</td>
                 <td>${escapeHTML(t.name)}</td>
                 <td style="text-align:right;">Rp${t.nominalKupon.toLocaleString('id-ID')}</td>
-                <td style="text-align:center;">-</td>
-                <td style="text-align:center;">-</td>
-                <td style="text-align:center;">-</td>
+                <td style="text-align:center;">${saldoPlusBeli} lbr</td>
+                <td style="text-align:center;">${lpjKupon} lbr</td>
+                <td style="text-align:center;">${intransitKupon} lbr</td>
                 <td style="text-align:center; font-weight:bold;">${kuponFisik} lbr</td>
-                <td style="text-align:center; color:#059669; font-weight:bold;">0</td>
+                <td style="text-align:center; color:${selisihKupon === 0 ? '#059669' : '#e11d48'}; font-weight:bold;">${selisihKupon === 0 ? '0' : (selisihKupon > 0 ? '+' + selisihKupon : selisihKupon)}</td>
             </tr>
         `;
     });
@@ -2217,7 +2288,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Form Edit Nota Submit Handler
+    // Form Edit Nota Submit Handler (with ID preservation)
     const formEditNota = document.getElementById('formEditNota');
     if (formEditNota) {
         formEditNota.addEventListener('submit', (e) => {
@@ -2226,7 +2297,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isNaN(index) || index < 0 || !databaseNota[index]) return;
 
             const item = databaseNota[index];
-            item.no = document.getElementById('editNoTransaksi').value.trim();
+            const originalNo = editNotaOriginalNo || item.no || '';
+            const newNo = document.getElementById('editNoTransaksi').value.trim();
+
+            item.no = newNo;
             item.tanggal = document.getElementById('editTanggalNota').value;
             item.plat = document.getElementById('editPlatNomor').value;
             item.bbm = document.getElementById('editJenisBbm').value;
@@ -2235,8 +2309,12 @@ document.addEventListener('DOMContentLoaded', () => {
             item.pemohon = document.getElementById('editNamaPemohon').value.trim();
 
             if (SPREADSHEET_WEBAPP_URL) {
-                fetchWithAuth({ action: 'edit_nota', rowIndex: item.rowIndex || (index + 2), ...item })
-                    .then(() => muatDataDariSpreadsheet());
+                fetchWithAuth({ 
+                    action: 'edit_nota', 
+                    originalNo: originalNo, 
+                    rowIndex: item.rowIndex || (index + 2), 
+                    ...item 
+                }).then(() => muatDataDariSpreadsheet(false));
             }
 
             tutupModalEdit();
