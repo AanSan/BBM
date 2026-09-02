@@ -2254,9 +2254,8 @@ function debounce(func, wait = 250) {
 
 // ============================================================
 // ============================================================
-// AI OCR SCANNER (GROQ CLOUD LLAMA 3.2 VISION EXCLUSIVE)
+// AI OCR SCANNER (GROQ VISION VIA GOOGLE APPS SCRIPT BACKEND)
 // ============================================================
-const GROQ_DEFAULT_API_KEY = "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";
 
 async function callGroqVisionOCR(base64Image, apiKey) {
     const base64Data = base64Image.indexOf(',') > -1 ? base64Image.split(',')[1] : base64Image;
@@ -2342,16 +2341,20 @@ async function triggerGroqOcrScan(base64Image) {
     let data = null;
     let errorDetail = "";
 
-    // 1. Direct Browser-to-Groq API Call (< 0.3 Detik)
-    const groqKey = localStorage.getItem('groq_api_key') || GROQ_DEFAULT_API_KEY;
-    try {
-        data = await callGroqVisionOCR(base64Image, groqKey);
-        console.log("[Groq Vision] Success:", data);
-    } catch (directErr) {
-        console.warn("[Groq Vision] Direct call gagal, mencoba GAS backend:", directErr);
-        errorDetail = directErr.message;
+    // 1. Direct Browser-to-Groq API Call (Hanya jika user mengisi custom API Key di local browser)
+    const customGroqKey = (localStorage.getItem('groq_api_key') || '').trim();
+    if (customGroqKey) {
+        try {
+            data = await callGroqVisionOCR(base64Image, customGroqKey);
+            console.log("[Groq Vision] Direct Client Call Success:", data);
+        } catch (directErr) {
+            console.warn("[Groq Vision] Direct call gagal, mencoba GAS backend:", directErr);
+            errorDetail = directErr.message;
+        }
+    }
 
-        // 2. Fallback via Google Apps Script Backend (juga menggunakan Groq Vision)
+    // 2. Default / Fallback via Google Apps Script Backend (Aman, API Key tersimpan di GAS)
+    if (!data) {
         try {
             const token = getAuthToken();
             const response = await fetch(SPREADSHEET_WEBAPP_URL, {
@@ -2525,22 +2528,24 @@ function setupPhotoUploadListeners() {
 
     if (btnConfigKey) {
         btnConfigKey.addEventListener('click', () => {
-            const currentGroq = localStorage.getItem('groq_api_key') || GROQ_DEFAULT_API_KEY;
+            const currentGroq = localStorage.getItem('groq_api_key') || '';
             const entered = prompt(
-                '⚙️ PENGATURAN API KEY GROQ VISION:\n\n' +
+                '⚙️ PENGATURAN API KEY OCR GROQ VISION (OPSIONAL):\n\n' +
+                'Secara default, scan OCR diproses aman melalui server backend Google Apps Script.\n\n' +
+                'Jika ingin menggunakan API Key Groq pribadi Anda untuk direct scan browser:\n' +
                 'Kunci diawali: gsk_...\n' +
                 '(Dapatkan gratis di: https://console.groq.com/keys)\n\n' +
-                'Tempelkan API Key Groq Anda di bawah ini:',
+                'Tempelkan API Key Groq Anda di bawah ini (atau kosongkan untuk menggunakan default backend):',
                 currentGroq
             );
             if (entered !== null) {
                 const trimmed = entered.trim();
                 if (trimmed) {
                     localStorage.setItem('groq_api_key', trimmed);
-                    showToast('🚀 Groq Vision API Key berhasil disimpan & aktif!', 'success');
+                    showToast('🚀 Custom Groq Vision API Key berhasil disimpan & aktif!', 'success');
                 } else {
                     localStorage.removeItem('groq_api_key');
-                    showToast('ℹ️ API Key Groq direset ke default bawaan sistem.', 'info');
+                    showToast('ℹ️ API Key browser dihapus. Kembali menggunakan default Google Apps Script backend.', 'info');
                 }
             }
         });
