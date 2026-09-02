@@ -725,6 +725,8 @@ async function muatDataDariSpreadsheet(showSkeleton = true) {
         renderTabelOpname();
         renderOpnameFormInputs();
         hitungDanRenderSummary();
+        populateAnalyticsYearFilter();
+        renderAnalyticsDashboard();
     } else if (showSkeleton) {
         tampilkanSkeletonLoading();
     }
@@ -782,6 +784,8 @@ async function muatDataDariSpreadsheet(showSkeleton = true) {
             renderTabelOpname();
             renderOpnameFormInputs();
             hitungDanRenderSummary();
+            populateAnalyticsYearFilter();
+            renderAnalyticsDashboard();
 
             prosesOfflineQueue();
         } catch (err) {
@@ -830,21 +834,28 @@ function switchTab(tabId) {
 
 function switchViewTable(viewType) {
     const secNota = document.getElementById('notaTableSection');
+    const secAnalytics = document.getElementById('analyticsTableSection');
     const secIntransit = document.getElementById('intransitTableSection');
     const secPembelian = document.getElementById('pembelianTableSection');
     const secOpname = document.getElementById('opnameTableSection');
 
     const btnNota = document.getElementById('viewBtnNota');
+    const btnAnalytics = document.getElementById('viewBtnAnalytics');
     const btnIntransit = document.getElementById('viewBtnIntransit');
     const btnPembelian = document.getElementById('viewBtnPembelian');
     const btnOpname = document.getElementById('viewBtnOpname');
 
-    [secNota, secIntransit, secPembelian, secOpname].forEach(s => s && (s.style.display = 'none'));
-    [btnNota, btnIntransit, btnPembelian, btnOpname].forEach(b => b && b.classList.remove('active'));
+    [secNota, secAnalytics, secIntransit, secPembelian, secOpname].forEach(s => s && (s.style.display = 'none'));
+    [btnNota, btnAnalytics, btnIntransit, btnPembelian, btnOpname].forEach(b => b && b.classList.remove('active'));
 
     if (viewType === 'notaTable') {
         if (secNota) secNota.style.display = 'block';
         if (btnNota) btnNota.classList.add('active');
+    } else if (viewType === 'analyticsTable') {
+        if (secAnalytics) secAnalytics.style.display = 'block';
+        if (btnAnalytics) btnAnalytics.classList.add('active');
+        populateAnalyticsYearFilter();
+        renderAnalyticsDashboard();
     } else if (viewType === 'intransitTable') {
         if (secIntransit) secIntransit.style.display = 'block';
         if (btnIntransit) btnIntransit.classList.add('active');
@@ -1580,6 +1591,419 @@ function renderTabelOpname() {
 }
 
 // ============================================================
+// DASHBOARD GRAFIK & ANALITIK KONSUMSI BBM (CHART.JS)
+// ============================================================
+let chartTrenBulananInstance = null;
+let chartKonsumsiKendaraanInstance = null;
+let chartDistribusiBbmInstance = null;
+
+function populateAnalyticsYearFilter() {
+    const yearSelect = document.getElementById('analyticsFilterYear');
+    if (!yearSelect) return;
+    const currentVal = yearSelect.value || 'semua';
+
+    const years = new Set();
+    databaseNota.forEach(item => {
+        if (item.tanggal) {
+            const y = String(item.tanggal).split('-')[0];
+            if (y && y.length === 4) years.add(y);
+        }
+    });
+
+    const sortedYears = Array.from(years).sort((a, b) => b - a);
+    let optionsHtml = '<option value="semua">Semua Periode</option>';
+    sortedYears.forEach(y => {
+        optionsHtml += `<option value="${y}">Tahun ${y}</option>`;
+    });
+
+    yearSelect.innerHTML = optionsHtml;
+    if (sortedYears.includes(currentVal) || currentVal === 'semua') {
+        yearSelect.value = currentVal;
+    }
+}
+
+function renderAnalyticsDashboard(filterYear = null) {
+    if (typeof Chart === 'undefined') {
+        console.warn("Chart.js belum dimuat.");
+        return;
+    }
+
+    const yearSelect = document.getElementById('analyticsFilterYear');
+    const selectedYear = filterYear || (yearSelect ? yearSelect.value : 'semua');
+
+    let filteredData = [...databaseNota];
+    if (selectedYear && selectedYear !== 'semua') {
+        filteredData = filteredData.filter(item => item.tanggal && String(item.tanggal).startsWith(selectedYear));
+    }
+
+    // 1. KPI Aggregations
+    let totalRp = 0;
+    let totalKupon = 0;
+    const totalTransaksi = filteredData.length;
+
+    const monthlyRp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    const monthlyKupon = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    const activeMonths = new Set();
+
+    const vehicleMap = {};
+    const bbmMap = {
+        'PERTAMAX 20.000': { kupon: 0, rp: 0 },
+        'PERTAMAX 100.000': { kupon: 0, rp: 0 },
+        'PERTAMAX 200.000': { kupon: 0, rp: 0 },
+        'DEXLITE 200.000': { kupon: 0, rp: 0 }
+    };
+
+    filteredData.forEach(item => {
+        const nominal = Number(item.total) || 0;
+        let jmlKupon = Number(item.kupon);
+        if (!jmlKupon || isNaN(jmlKupon)) jmlKupon = Math.floor(nominal / getNominalPerKupon(item.bbm)) || 1;
+
+        totalRp += nominal;
+        totalKupon += jmlKupon;
+
+        // Monthly breakdown
+        if (item.tanggal) {
+            const parts = String(item.tanggal).split('-');
+            if (parts.length >= 2) {
+                const monthIdx = parseInt(parts[1], 10) - 1;
+                if (monthIdx >= 0 && monthIdx < 12) {
+                    monthlyRp[monthIdx] += nominal;
+                    monthlyKupon[monthIdx] += jmlKupon;
+                    activeMonths.add(monthIdx);
+                }
+            }
+        }
+
+        // Vehicle breakdown
+        const plat = item.plat ? String(item.plat).toUpperCase().trim() : 'KANTOR';
+        if (!vehicleMap[plat]) {
+            vehicleMap[plat] = { rp: 0, kupon: 0, count: 0 };
+        }
+        vehicleMap[plat].rp += nominal;
+        vehicleMap[plat].kupon += jmlKupon;
+        vehicleMap[plat].count += 1;
+
+        // BBM breakdown
+        const bbmKey = matchBbmKey(item.bbm);
+        if (bbmMap[bbmKey]) {
+            bbmMap[bbmKey].rp += nominal;
+            bbmMap[bbmKey].kupon += jmlKupon;
+        }
+    });
+
+    // Top Vehicle
+    let topVehicleName = '-';
+    let topVehicleKupon = 0;
+    let topVehicleRp = 0;
+    Object.keys(vehicleMap).forEach(plat => {
+        if (vehicleMap[plat].rp > topVehicleRp) {
+            topVehicleRp = vehicleMap[plat].rp;
+            topVehicleName = plat;
+            topVehicleKupon = vehicleMap[plat].kupon;
+        }
+    });
+
+    // Top BBM
+    let topBbmName = '-';
+    let topBbmKupon = 0;
+    Object.keys(bbmMap).forEach(key => {
+        if (bbmMap[key].kupon > topBbmKupon) {
+            topBbmKupon = bbmMap[key].kupon;
+            topBbmName = key;
+        }
+    });
+    const topBbmPct = totalKupon > 0 ? Math.round((topBbmKupon / totalKupon) * 100) : 0;
+
+    // Rata-rata per bulan aktif
+    const numMonths = activeMonths.size || 1;
+    const avgMonthlyRp = Math.round(totalRp / numMonths);
+
+    // Update KPI Elements
+    const kpiTotalRpEl = document.getElementById('kpiTotalRp');
+    const kpiAvgBulanEl = document.getElementById('kpiAvgBulan');
+    const kpiTotalKuponEl = document.getElementById('kpiTotalKupon');
+    const kpiTotalTransaksiEl = document.getElementById('kpiTotalTransaksi');
+    const kpiTopKendaraanEl = document.getElementById('kpiTopKendaraan');
+    const kpiTopKendaraanSubEl = document.getElementById('kpiTopKendaraanSub');
+    const kpiTopBbmEl = document.getElementById('kpiTopBbm');
+    const kpiTopBbmSubEl = document.getElementById('kpiTopBbmSub');
+
+    if (kpiTotalRpEl) kpiTotalRpEl.textContent = `Rp${totalRp.toLocaleString('id-ID')}`;
+    if (kpiAvgBulanEl) kpiAvgBulanEl.textContent = `Rata-rata: Rp${avgMonthlyRp.toLocaleString('id-ID')}/bln`;
+    if (kpiTotalKuponEl) kpiTotalKuponEl.textContent = `${totalKupon.toLocaleString('id-ID')} Lembar`;
+    if (kpiTotalTransaksiEl) kpiTotalTransaksiEl.textContent = `${totalTransaksi.toLocaleString('id-ID')} Transaksi SPBU`;
+    if (kpiTopKendaraanEl) kpiTopKendaraanEl.textContent = topVehicleName;
+    if (kpiTopKendaraanSubEl) kpiTopKendaraanSubEl.textContent = topVehicleKupon > 0 ? `${topVehicleKupon} lbr (Rp${topVehicleRp.toLocaleString('id-ID')})` : 'Belum ada data';
+    if (kpiTopBbmEl) kpiTopBbmEl.textContent = cleanBbmDisplay(topBbmName);
+    if (kpiTopBbmSubEl) kpiTopBbmSubEl.textContent = `${topBbmPct}% dari total kupon (${topBbmKupon} lbr)`;
+
+    // ==========================================
+    // 2. CHART 1: TREN PENGELUARAN BULANAN (BAR + LINE)
+    // ==========================================
+    const ctxTren = document.getElementById('chartTrenBulanan');
+    if (ctxTren) {
+        if (chartTrenBulananInstance) {
+            chartTrenBulananInstance.destroy();
+        }
+
+        const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+        chartTrenBulananInstance = new Chart(ctxTren, {
+            type: 'bar',
+            data: {
+                labels: monthLabels,
+                datasets: [
+                    {
+                        type: 'line',
+                        label: 'Jumlah Kupon (Lembar)',
+                        data: monthlyKupon,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                        borderWidth: 2.5,
+                        pointBackgroundColor: '#10b981',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        tension: 0.35,
+                        yAxisID: 'yKupon',
+                        order: 1
+                    },
+                    {
+                        type: 'bar',
+                        label: 'Total Biaya (Rp)',
+                        data: monthlyRp,
+                        backgroundColor: 'rgba(79, 70, 229, 0.85)',
+                        hoverBackgroundColor: '#4338ca',
+                        borderRadius: 8,
+                        borderSkipped: false,
+                        yAxisID: 'yRp',
+                        order: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.92)',
+                        titleFont: { family: 'Plus Jakarta Sans', size: 13, weight: 'bold' },
+                        bodyFont: { family: 'Plus Jakarta Sans', size: 12 },
+                        padding: 12,
+                        cornerRadius: 12,
+                        callbacks: {
+                            label: function (context) {
+                                if (context.dataset.yAxisID === 'yRp') {
+                                    return ` Total Biaya: Rp${(context.parsed.y || 0).toLocaleString('id-ID')}`;
+                                } else {
+                                    return ` Kupon Digunakan: ${context.parsed.y || 0} lembar`;
+                                }
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { family: 'Plus Jakarta Sans', size: 11, weight: '600' }, color: '#64748b' }
+                    },
+                    yRp: {
+                        type: 'linear',
+                        position: 'left',
+                        grid: { color: '#f1f5f9' },
+                        ticks: {
+                            font: { family: 'Plus Jakarta Sans', size: 10, weight: '600' },
+                            color: '#64748b',
+                            callback: function (val) {
+                                if (val >= 1000000) return 'Rp' + (val / 1000000).toFixed(1) + 'M';
+                                if (val >= 1000) return 'Rp' + (val / 1000).toFixed(0) + 'K';
+                                return 'Rp' + val;
+                            }
+                        }
+                    },
+                    yKupon: {
+                        type: 'linear',
+                        position: 'right',
+                        grid: { display: false },
+                        ticks: {
+                            font: { family: 'Plus Jakarta Sans', size: 10, weight: '600' },
+                            color: '#10b981',
+                            callback: function (val) { return val + ' lbr'; }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // ==========================================
+    // 3. CHART 2: KONSUMSI PER KENDARAAN (HORIZONTAL BAR)
+    // ==========================================
+    const ctxKendaraan = document.getElementById('chartKonsumsiKendaraan');
+    if (ctxKendaraan) {
+        if (chartKonsumsiKendaraanInstance) {
+            chartKonsumsiKendaraanInstance.destroy();
+        }
+
+        const sortedVehicles = Object.keys(vehicleMap)
+            .map(plat => ({ plat, ...vehicleMap[plat] }))
+            .sort((a, b) => b.rp - a.rp)
+            .slice(0, 8); // Top 8 vehicles
+
+        const vLabels = sortedVehicles.map(v => v.plat);
+        const vRpData = sortedVehicles.map(v => v.rp);
+        const vKuponData = sortedVehicles.map(v => v.kupon);
+
+        chartKonsumsiKendaraanInstance = new Chart(ctxKendaraan, {
+            type: 'bar',
+            data: {
+                labels: vLabels.length ? vLabels : ['Belum ada data'],
+                datasets: [{
+                    label: 'Total Biaya (Rp)',
+                    data: vRpData.length ? vRpData : [0],
+                    backgroundColor: [
+                        'rgba(79, 70, 229, 0.9)',
+                        'rgba(6, 182, 212, 0.9)',
+                        'rgba(16, 185, 129, 0.9)',
+                        'rgba(245, 158, 11, 0.9)',
+                        'rgba(99, 102, 241, 0.8)',
+                        'rgba(20, 184, 166, 0.8)',
+                        'rgba(139, 92, 246, 0.8)',
+                        'rgba(244, 63, 94, 0.8)'
+                    ],
+                    borderRadius: 6,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.92)',
+                        titleFont: { family: 'Plus Jakarta Sans', size: 12, weight: 'bold' },
+                        bodyFont: { family: 'Plus Jakarta Sans', size: 11 },
+                        padding: 10,
+                        cornerRadius: 10,
+                        callbacks: {
+                            label: function (context) {
+                                const idx = context.dataIndex;
+                                const kupon = vKuponData[idx] || 0;
+                                return ` Rp${(context.parsed.x || 0).toLocaleString('id-ID')} (${kupon} voucher)`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: '#f1f5f9' },
+                        ticks: {
+                            font: { family: 'Plus Jakarta Sans', size: 10, weight: '600' },
+                            color: '#64748b',
+                            callback: function (val) {
+                                if (val >= 1000000) return (val / 1000000).toFixed(1) + 'M';
+                                if (val >= 1000) return (val / 1000).toFixed(0) + 'K';
+                                return val;
+                            }
+                        }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { font: { family: 'Plus Jakarta Sans', size: 11, weight: '700' }, color: '#1e293b' }
+                    }
+                }
+            }
+        });
+    }
+
+    // ==========================================
+    // 4. CHART 3: PROPORSI JENIS BBM (DOUGHNUT)
+    // ==========================================
+    const ctxBbm = document.getElementById('chartDistribusiBbm');
+    if (ctxBbm) {
+        if (chartDistribusiBbmInstance) {
+            chartDistribusiBbmInstance.destroy();
+        }
+
+        const bbmLabels = ['Pertamax 20k', 'Pertamax 100k', 'Pertamax 200k', 'Dexlite 200k'];
+        const bbmValues = [
+            bbmMap['PERTAMAX 20.000'].kupon,
+            bbmMap['PERTAMAX 100.000'].kupon,
+            bbmMap['PERTAMAX 200.000'].kupon,
+            bbmMap['DEXLITE 200.000'].kupon
+        ];
+        const bbmRpValues = [
+            bbmMap['PERTAMAX 20.000'].rp,
+            bbmMap['PERTAMAX 100.000'].rp,
+            bbmMap['PERTAMAX 200.000'].rp,
+            bbmMap['DEXLITE 200.000'].rp
+        ];
+
+        chartDistribusiBbmInstance = new Chart(ctxBbm, {
+            type: 'doughnut',
+            data: {
+                labels: bbmLabels,
+                datasets: [{
+                    data: bbmValues.some(v => v > 0) ? bbmValues : [1],
+                    backgroundColor: [
+                        '#10b981', // Pertamax 20k - Green
+                        '#06b6d4', // Pertamax 100k - Cyan
+                        '#4f46e5', // Pertamax 200k - Indigo
+                        '#f59e0b'  // Dexlite 200k - Amber
+                    ],
+                    borderWidth: 3,
+                    borderColor: '#ffffff',
+                    hoverOffset: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '68%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            font: { family: 'Plus Jakarta Sans', size: 11, weight: '700' },
+                            color: '#334155',
+                            padding: 12,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.92)',
+                        titleFont: { family: 'Plus Jakarta Sans', size: 12, weight: 'bold' },
+                        bodyFont: { family: 'Plus Jakarta Sans', size: 11 },
+                        padding: 10,
+                        cornerRadius: 10,
+                        callbacks: {
+                            label: function (context) {
+                                const idx = context.dataIndex;
+                                const kupon = bbmValues[idx] || 0;
+                                const rp = bbmRpValues[idx] || 0;
+                                const pct = totalKupon > 0 ? Math.round((kupon / totalKupon) * 100) : 0;
+                                return ` ${context.label}: ${kupon} lbr (${pct}%) • Rp${rp.toLocaleString('id-ID')}`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+}
+
+// ============================================================
 // MODAL LIGHTBOX & PREVIEW FOTO
 // ============================================================
 // MODAL PRATINJAU FOTO
@@ -1701,6 +2125,8 @@ function eksekusiHapus() {
         );
         renderTabel();
         hitungDanRenderSummary();
+        populateAnalyticsYearFilter();
+        renderAnalyticsDashboard();
     }
     tutupModalHapus();
 }
@@ -2487,6 +2913,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('tanggalNota')) document.getElementById('tanggalNota').value = getLocalDateYMD();
     if (document.getElementById('tglAmbil')) document.getElementById('tglAmbil').value = getLocalDateYMD();
 
+    const analyticsYearSelect = document.getElementById('analyticsFilterYear');
+    if (analyticsYearSelect) {
+        analyticsYearSelect.addEventListener('change', (e) => {
+            renderAnalyticsDashboard(e.target.value);
+        });
+    }
+
     // ============ LOGIN FORM HANDLER ============
     const formLogin = document.getElementById('formLogin');
     if (formLogin) {
@@ -2639,6 +3072,8 @@ document.addEventListener('DOMContentLoaded', () => {
             renderTabel();
             populateDropdownIntransit();
             hitungDanRenderSummary();
+            populateAnalyticsYearFilter();
+            renderAnalyticsDashboard();
             showToast(`✅ LPJ Nota (${jumlahKupon} voucher kertas) berhasil disimpan!`, 'success');
             kirimNotifikasiSistem(
                 "📝 Nota LPJ Baru Terinput",
@@ -2680,6 +3115,8 @@ document.addEventListener('DOMContentLoaded', () => {
             tutupModalEdit();
             renderTabel();
             hitungDanRenderSummary();
+            populateAnalyticsYearFilter();
+            renderAnalyticsDashboard();
             showToast("✅ Data Nota LPJ berhasil diperbarui!", "success");
             kirimNotifikasiSistem(
                 "✏️ Nota LPJ Diperbarui",

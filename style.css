@@ -2333,3 +2333,47 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     border-bottom: 1px solid #e2e8f0;
 }
 
+/* ==============================================================
+   DASHBOARD GRAFIK & ANALITIK KONSUMSI BBM
+   ============================================================== */
+.chart-canvas-wrapper {
+    position: relative;
+    width: 100%;
+    min-height: 260px;
+}
+
+.chart-canvas-wrapper canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.analytics-year-select {
+    min-width: 140px;
+    height: 38px;
+    background-color: #ffffff;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 12px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text-dark);
+    padding: 0 34px 0 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.analytics-year-select:hover {
+    border-color: var(--primary-indigo);
+    background-color: #f8fafc;
+}
+
+.analytics-year-select:focus {
+    border-color: var(--primary-indigo);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+}
+
+@media (max-width: 640px) {
+    .chart-canvas-wrapper {
+        min-height: 230px;
+    }
+}
+
