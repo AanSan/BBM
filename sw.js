@@ -1,12 +1,10 @@
-const CACHE_NAME = 'bbm-kppd-v10';
+const CACHE_NAME = 'bbm-kppd-v20';
 const STATIC_ASSETS = [
     './',
     './index.html',
     './style.css',
     './app.js',
-    './manifest.json',
-    'https://cdn.tailwindcss.com',
-    'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap'
+    './manifest.json'
 ];
 
 // Install Event — Cache Static Resources
@@ -41,17 +39,15 @@ self.addEventListener('activate', event => {
 
 // Fetch Event — Stale While Revalidate Strategy for Local Assets
 self.addEventListener('fetch', event => {
-    // Bypass non-GET requests or Google Apps Script API calls from cache
-    if (event.request.method !== 'GET' || event.request.url.includes('script.google.com')) {
+    // Only cache http/https, ignore chrome-extension, external APIs, etc.
+    if (event.request.method !== 'GET' || !event.request.url.startsWith('http') || event.request.url.includes('script.google.com') || event.request.url.includes('generativelanguage.googleapis.com')) {
         return;
     }
 
     event.respondWith(
         caches.match(event.request).then(cachedResponse => {
             const fetchPromise = fetch(event.request).then(networkResponse => {
-                // Fix: cache juga CORS responses (Google Fonts, CDN assets)
-                if (networkResponse && networkResponse.status === 200 &&
-                    (networkResponse.type === 'basic' || networkResponse.type === 'cors')) {
+                if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
                     const responseToCache = networkResponse.clone();
                     caches.open(CACHE_NAME).then(cache => {
                         cache.put(event.request, responseToCache);
@@ -59,7 +55,6 @@ self.addEventListener('fetch', event => {
                 }
                 return networkResponse;
             }).catch(() => {
-                // Fix: offline fallback — return cached index.html untuk navigation requests
                 if (cachedResponse) return cachedResponse;
                 if (event.request.mode === 'navigate') {
                     return caches.match('./index.html');

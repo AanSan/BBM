@@ -1,9 +1,9 @@
 /**
- * ==============================================================
- * APP.JS — Sistem Manajemen & Rekonsiliasi Kupon BBM KPPD DIY di Kab. Bantul
- * v3 ENHANCED: Stock Opname, Manual LPJ Voucher Override, WA Reminder, Modern BA
- * ==============================================================
- */
+* ==============================================================
+* APP.JS — Sistem Manajemen & Rekonsiliasi Kupon BBM KPPD DIY di Kab. Bantul
+* v3 ENHANCED: Stock Opname, Manual LPJ Voucher Override, WA Reminder, Modern BA
+* ==============================================================
+*/
 
 const BBM_TYPES = [
     { name: "PERTAMAX 20.000", label: "🟢 PERTAMAX Rp20.000 (Motor)", nominalKupon: 20000 },
@@ -1827,44 +1827,331 @@ function debounce(func, wait = 250) {
 }
 
 // ============================================================
+// ============================================================
+// AI OCR SCANNER (GROQ CLOUD LLAMA 3.2 VISION EXCLUSIVE)
+// ============================================================
+const GROQ_DEFAULT_API_KEY = "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";
+
+async function callGroqVisionOCR(base64Image, apiKey) {
+    const base64Data = base64Image.indexOf(',') > -1 ? base64Image.split(',')[1] : base64Image;
+    const prompt = "Kamu adalah sistem OCR dan analisis cerdas struk/nota pembelian BBM SPBU (Pertamina/Shell/dll) di Indonesia untuk instansi Samsat / KPPD DIY Bantul.\n" +
+        "Tugasmu adalah membaca dan mengekstrak informasi transaksi dari foto struk/nota SPBU ini secara teliti dan akurat.\n\n" +
+        "Daftar kendaraan dinas resmi:\n" +
+        "- AVANZA 86 B (Plat AB 86 B, BBM: PERTAMAX 200.000)\n" +
+        "- JEMPOL 1132 BI (Plat AB 1132 BI, BBM: PERTAMAX 100.000)\n" +
+        "- PICK UP 8243 UA (Plat AB 8243 UA, BBM: PERTAMAX 200.000)\n" +
+        "- SAMLING 7110 UA (Plat AB 7110 UA, BBM: DEXLITE 200.000)\n" +
+        "- L300 AB8073BI (Plat AB 8073 BI, BBM: DEXLITE 200.000)\n" +
+        "- AVANZA 1000 IS (Plat AB 1000 IS, BBM: PERTAMAX 200.000)\n" +
+        "- SUPRA 2112 IA (Plat AB 2112 IA, BBM: PERTAMAX 20.000)\n" +
+        "- SUPRA 2112 UB (Plat AB 2112 UB, BBM: PERTAMAX 20.000)\n" +
+        "- SUPRA 2859 IS (Plat AB 2859 IS, BBM: PERTAMAX 20.000)\n" +
+        "- GODOOR 2422 IF (Plat AB 2422 IF, BBM: PERTAMAX 20.000)\n" +
+        "- GENZET (Genset Kantor, BBM: DEXLITE 200.000)\n\n" +
+        "Daftar Jenis Kupon BBM:\n" +
+        "- PERTAMAX 20.000\n" +
+        "- PERTAMAX 100.000\n" +
+        "- PERTAMAX 200.000\n" +
+        "- DEXLITE 200.000\n\n" +
+        "Keluarkan output dalam format JSON murni dengan struktur berikut:\n" +
+        "{\n" +
+        "  \"tanggal\": \"YYYY-MM-DD\",\n" +
+        "  \"noTransaksi\": \"nomor transaksi atau nomor struk\",\n" +
+        "  \"total\": 200000,\n" +
+        "  \"platNomor\": \"nama plat dari daftar kendaraan resmi di atas yang cocok\",\n" +
+        "  \"jenisBbm\": \"nama salah satu jenis kupon BBM dari daftar di atas yang paling sesuai\",\n" +
+        "  \"volumeLiter\": 15.42\n" +
+        "}";
+
+    const payload = {
+        model: "llama-3.2-11b-vision-preview",
+        messages: [
+            {
+                role: "user",
+                content: [
+                    { type: "text", text: prompt },
+                    {
+                        type: "image_url",
+                        image_url: {
+                            url: `data:image/jpeg;base64,${base64Data}`
+                        }
+                    }
+                ]
+            }
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.1
+    };
+
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify(payload)
+    });
+
+    const resJson = await res.json();
+    if (!res.ok || resJson.error) {
+        const msg = resJson.error ? resJson.error.message : `HTTP ${res.status}`;
+        throw new Error(`Groq Vision Error: ${msg}`);
+    }
+
+    const content = resJson.choices && resJson.choices[0] && resJson.choices[0].message && resJson.choices[0].message.content;
+    if (!content) throw new Error("Respon Groq Vision kosong.");
+
+    const clean = content.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+    return JSON.parse(clean);
+}
+
+async function triggerGroqOcrScan(base64Image) {
+    const scanStatus = document.getElementById('scanStatus');
+    if (scanStatus) {
+        scanStatus.style.display = 'flex';
+        scanStatus.className = 'scan-status-alert';
+        scanStatus.innerHTML = '<span>🤖</span> <span>Menganalisis foto nota dengan Groq Vision AI...</span>';
+    }
+
+    let data = null;
+    let errorDetail = "";
+
+    // 1. Direct Browser-to-Groq API Call (< 0.3 Detik)
+    const groqKey = localStorage.getItem('groq_api_key') || GROQ_DEFAULT_API_KEY;
+    try {
+        data = await callGroqVisionOCR(base64Image, groqKey);
+        console.log("[Groq Vision] Success:", data);
+    } catch (directErr) {
+        console.warn("[Groq Vision] Direct call gagal, mencoba GAS backend:", directErr);
+        errorDetail = directErr.message;
+
+        // 2. Fallback via Google Apps Script Backend (juga menggunakan Groq Vision)
+        try {
+            const token = getAuthToken();
+            const response = await fetch(SPREADSHEET_WEBAPP_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({
+                    action: 'ocr',
+                    token: token,
+                    foto: base64Image
+                })
+            });
+
+            const resData = await response.json();
+            if (resData && resData.status === 'success' && resData.data) {
+                data = resData.data;
+            } else if (resData && resData.message) {
+                errorDetail = resData.message;
+            }
+        } catch (gasErr) {
+            console.error("[Groq Vision] GAS backend error:", gasErr);
+            errorDetail = gasErr.message || errorDetail;
+        }
+    }
+
+    if (data) {
+        // 1. Auto-fill Tanggal Nota
+        if (data.tanggal) {
+            const tglEl = document.getElementById('tanggalNota');
+            if (tglEl) {
+                tglEl.value = data.tanggal;
+                tglEl.dispatchEvent(new Event('input', { bubbles: true }));
+                tglEl.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
+
+        // 2. Auto-fill No Transaksi
+        if (data.noTransaksi) {
+            const noEl = document.getElementById('noTransaksi');
+            if (noEl) {
+                noEl.value = String(data.noTransaksi).trim();
+                noEl.dispatchEvent(new Event('input', { bubbles: true }));
+                noEl.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
+
+        // 3. Auto-fill Total Rupiah
+        if (data.total && Number(data.total) > 0) {
+            const totalEl = document.getElementById('totalHarga');
+            if (totalEl) {
+                totalEl.value = Number(data.total);
+                totalEl.dispatchEvent(new Event('input', { bubbles: true }));
+                totalEl.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
+
+        // 4. Match Plat Kendaraan (Normalisasi deteksi karakter struk thermal)
+        const combinedPlatStr = (String(data.platNomor || "") + " " + JSON.stringify(data)).toUpperCase().replace(/[^A-Z0-9]/g, "");
+        let matchedVehicle = null;
+
+        if (combinedPlatStr.includes("86B") || (combinedPlatStr.includes("86") && combinedPlatStr.includes("AVANZA"))) {
+            matchedVehicle = KENDARAAN_RULES.find(r => r.plat === "AVANZA 86 B");
+        } else if (combinedPlatStr.includes("1132") || combinedPlatStr.includes("JEMPOL")) {
+            matchedVehicle = KENDARAAN_RULES.find(r => r.plat === "JEMPOL 1132 BI");
+        } else if (combinedPlatStr.includes("8243") || combinedPlatStr.includes("PICKUP") || combinedPlatStr.includes("PICK UP")) {
+            matchedVehicle = KENDARAAN_RULES.find(r => r.plat === "PICK UP 8243 UA");
+        } else if (combinedPlatStr.includes("7110") || combinedPlatStr.includes("SAMLING")) {
+            matchedVehicle = KENDARAAN_RULES.find(r => r.plat === "SAMLING 7110 UA");
+        } else if (combinedPlatStr.includes("8073") || combinedPlatStr.includes("L300")) {
+            matchedVehicle = KENDARAAN_RULES.find(r => r.plat === "L300 AB8073BI");
+        } else if (combinedPlatStr.includes("1000IS") || (combinedPlatStr.includes("1000") && combinedPlatStr.includes("AVANZA"))) {
+            matchedVehicle = KENDARAAN_RULES.find(r => r.plat === "AVANZA 1000 IS");
+        } else if (combinedPlatStr.includes("2112IA") || (combinedPlatStr.includes("2112") && combinedPlatStr.includes("IA"))) {
+            matchedVehicle = KENDARAAN_RULES.find(r => r.plat === "SUPRA 2112 IA");
+        } else if (combinedPlatStr.includes("2112UB") || (combinedPlatStr.includes("2112") && combinedPlatStr.includes("UB"))) {
+            matchedVehicle = KENDARAAN_RULES.find(r => r.plat === "SUPRA 2112 UB");
+        } else if (combinedPlatStr.includes("2859") || combinedPlatStr.includes("2859IS")) {
+            matchedVehicle = KENDARAAN_RULES.find(r => r.plat === "SUPRA 2859 IS");
+        } else if (combinedPlatStr.includes("2422") || combinedPlatStr.includes("GODOOR")) {
+            matchedVehicle = KENDARAAN_RULES.find(r => r.plat === "GODOOR 2422 IF");
+        } else if (combinedPlatStr.includes("GENSET") || combinedPlatStr.includes("GENZET")) {
+            matchedVehicle = KENDARAAN_RULES.find(r => r.plat === "GENZET");
+        } else {
+            matchedVehicle = KENDARAAN_RULES.find(r => {
+                const cleanPlat = r.plat.toUpperCase().replace(/[^A-Z0-9]/g, "");
+                if (combinedPlatStr.includes(cleanPlat)) return true;
+                if (r.keywords && r.keywords.some(kw => combinedPlatStr.includes(kw.toUpperCase().replace(/[^A-Z0-9]/g, "")))) return true;
+                return false;
+            });
+        }
+
+        const platEl = document.getElementById('platNomor');
+        if (platEl && matchedVehicle) {
+            platEl.value = matchedVehicle.plat;
+            platEl.dispatchEvent(new Event('change', { bubbles: true }));
+            platEl.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+
+        // 5. Match Jenis BBM
+        let matchedBbmName = null;
+        if (matchedVehicle && matchedVehicle.bbm) {
+            matchedBbmName = matchedVehicle.bbm;
+        } else {
+            const rawBbm = String(data.jenisBbm || "").toUpperCase();
+            const total = Number(data.total) || 0;
+            if (rawBbm.includes("DEX") || rawBbm.includes("SOLAR") || rawBbm.includes("DIESEL")) {
+                matchedBbmName = "DEXLITE 200.000";
+            } else if (total === 100000 || rawBbm.includes("100.000") || rawBbm.includes("100000")) {
+                matchedBbmName = "PERTAMAX 100.000";
+            } else if (total === 200000 || rawBbm.includes("200.000") || rawBbm.includes("200000")) {
+                matchedBbmName = "PERTAMAX 200.000";
+            } else if (total === 20000 || rawBbm.includes("20.000") || rawBbm.includes("20000")) {
+                matchedBbmName = "PERTAMAX 20.000";
+            } else {
+                matchedBbmName = "PERTAMAX 100.000";
+            }
+        }
+
+        const bbmEl = document.getElementById('jenisBbm');
+        if (bbmEl && matchedBbmName) {
+            bbmEl.value = matchedBbmName;
+            bbmEl.dispatchEvent(new Event('change', { bubbles: true }));
+            bbmEl.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+
+        // 6. Auto-calculate Jumlah Kupon / Voucher
+        const kuponEl = document.getElementById('jumlahKuponNota');
+        if (kuponEl && data.total) {
+            const bbmRule = BBM_TYPES.find(b => b.name === (bbmEl ? bbmEl.value : matchedBbmName));
+            const nominal = bbmRule ? bbmRule.nominalKupon : 100000;
+            const calculatedKupon = Math.max(1, Math.round(Number(data.total) / nominal));
+            kuponEl.value = calculatedKupon;
+            kuponEl.dispatchEvent(new Event('change', { bubbles: true }));
+            kuponEl.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+
+        // 7. Auto-focus ke Driver / Pegawai agar user tinggal mengetik nama pegawai
+        const namaPegawaiEl = document.getElementById('namaPemohonNota');
+        if (namaPegawaiEl) {
+            namaPegawaiEl.focus();
+        }
+
+        if (scanStatus) {
+            scanStatus.className = 'scan-status-alert success';
+            const summary = [];
+            if (data.noTransaksi) summary.push(`No: ${data.noTransaksi}`);
+            if (matchedVehicle) summary.push(matchedVehicle.plat);
+            if (matchedBbmName) summary.push(matchedBbmName);
+            if (data.total) summary.push(`Rp${Number(data.total).toLocaleString('id-ID')}`);
+
+            scanStatus.innerHTML = `<span>✨</span> <span><strong>AI Berhasil Ekstrak Nota:</strong> ${summary.length ? summary.join(' | ') : 'Form terisi otomatis.'}</span>`;
+            setTimeout(() => { if (scanStatus) scanStatus.style.display = 'none'; }, 8000);
+        }
+        showToast("✨ Data nota berhasil diekstrak otomatis!", "success");
+    } else {
+        console.warn("[Gemini AI] Extraction failed:", errorDetail);
+        if (scanStatus) {
+            scanStatus.className = 'scan-status-alert error';
+            scanStatus.innerHTML = `<span>⚠️</span> <span><strong>Gagal AI:</strong> ${escapeHTML(errorDetail || 'Tidak dapat membaca nota.')}</span>`;
+            setTimeout(() => { if (scanStatus) scanStatus.style.display = 'none'; }, 8000);
+        }
+        showToast(`⚠️ Gagal scan AI: ${errorDetail || 'Periksa API Key'}`, "warning");
+    }
+}
+
 // UPLOAD FOTO & PREVIEW SCANNER (DENGAN KOMPRESI CLIENT-SIDE)
 // ============================================================
 function setupPhotoUploadListeners() {
     const inputs = [document.getElementById('fileNota'), document.getElementById('fileNotaKamera')];
     const scanStatus = document.getElementById('scanStatus');
+    const btnConfigKey = document.getElementById('btnConfigApiKey');
+
+    if (btnConfigKey) {
+        btnConfigKey.addEventListener('click', () => {
+            const currentGroq = localStorage.getItem('groq_api_key') || GROQ_DEFAULT_API_KEY;
+            const entered = prompt(
+                '⚙️ PENGATURAN API KEY GROQ VISION:\n\n' +
+                'Kunci diawali: gsk_...\n' +
+                '(Dapatkan gratis di: https://console.groq.com/keys)\n\n' +
+                'Tempelkan API Key Groq Anda di bawah ini:',
+                currentGroq
+            );
+            if (entered !== null) {
+                const trimmed = entered.trim();
+                if (trimmed) {
+                    localStorage.setItem('groq_api_key', trimmed);
+                    showToast('🚀 Groq Vision API Key berhasil disimpan & aktif!', 'success');
+                } else {
+                    localStorage.removeItem('groq_api_key');
+                    showToast('ℹ️ API Key Groq direset ke default bawaan sistem.', 'info');
+                }
+            }
+        });
+    }
 
     inputs.forEach(input => {
         if (!input) return;
+
+        // Reset value on click so choosing same file triggers change event reliably
+        input.addEventListener('click', () => {
+            input.value = '';
+        });
+
         input.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
 
             if (scanStatus) {
-                scanStatus.style.display = 'block';
+                scanStatus.style.display = 'flex';
                 scanStatus.className = 'scan-status-alert';
-                scanStatus.innerHTML = '<span>⏳</span> Membaca & Mengompres Foto Nota...';
+                scanStatus.innerHTML = '<span>⏳</span> <span>Membaca & Mengompres Foto Nota...</span>';
             }
 
             try {
                 const compressedBase64 = await compressImageFile(file, 1280, 1280, 0.78);
                 tempCurrentBase64 = compressedBase64;
-                if (scanStatus) {
-                    scanStatus.className = 'scan-status-alert success';
-                    scanStatus.innerHTML = '<span>✅</span> Foto Nota SPBU Terlampir (Dikompresi)!';
-                    setTimeout(() => scanStatus.style.display = 'none', 3000);
-                }
-                showToast("📸 Foto nota berhasil diunggah & dikompresi", "success");
+                showToast("📸 Foto nota siap, menganalisis dengan Groq Vision AI...", "info");
+                
+                // Panggil AI OCR Groq Vision
+                await triggerGroqOcrScan(compressedBase64);
             } catch (err) {
                 console.error("Gagal mengompres foto, menggunakan fallback:", err);
                 const reader = new FileReader();
-                reader.onload = (evt) => {
+                reader.onload = async (evt) => {
                     tempCurrentBase64 = evt.target.result;
-                    if (scanStatus) {
-                        scanStatus.className = 'scan-status-alert success';
-                        scanStatus.innerHTML = '<span>✅</span> Foto Nota SPBU Terlampir!';
-                        setTimeout(() => scanStatus.style.display = 'none', 3000);
-                    }
-                    showToast("📸 Foto nota berhasil diunggah", "success");
+                    showToast("📸 Foto nota siap, menganalisis dengan Groq Vision AI...", "info");
+                    await triggerGroqOcrScan(tempCurrentBase64);
                 };
                 reader.readAsDataURL(file);
             }

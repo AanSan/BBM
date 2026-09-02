@@ -79,8 +79,8 @@
             }
         }
     </script>
-    <link rel="stylesheet" href="style.css">
-    <script src="app.js" defer></script>
+    <link rel="stylesheet" href="style.css?v=5.2">
+    <script src="app.js?v=5.2" defer></script>
 </head>
 
 <body
@@ -489,7 +489,10 @@
                         </div>
 
                         <div class="upload-zone">
-                            <label class="upload-label">📸 Scan Nota Fisik SPBU</label>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <label class="upload-label" style="margin-bottom: 0;">📸 Scan Nota Fisik SPBU</label>
+                                <button type="button" id="btnConfigApiKey" style="background: none; border: none; font-size: 11px; font-weight: 700; color: #4f46e5; cursor: pointer; text-decoration: underline;">⚙️ Atur API Key</button>
+                            </div>
                             <div class="upload-btn-group">
                                 <label for="fileNotaKamera" class="btn-action secondary">📷 Ambil Foto</label>
                                 <input type="file" id="fileNotaKamera" accept="image/*" capture="environment"
@@ -517,14 +520,29 @@
                         <div class="form-group">
                             <label for="platNomor">🚗 Nomor Kendaraan Dinas (Plat)</label>
                             <select id="platNomor" required>
-                                <option value="">-- Pilih Kendaraan Ops KPPD --</option>
+                                <option value="">🚗 -- Pilih Kendaraan Ops KPPD --</option>
+                                <option value="AVANZA 86 B">🚘 Avanza AB 86 B</option>
+                                <option value="JEMPOL 1132 BI">🚙 Jempol AB 1132 BI</option>
+                                <option value="PICK UP 8243 UA">🛻 Pick Up AB 8243 UA</option>
+                                <option value="SAMLING 7110 UA">🚐 Samling AB 7110 UA</option>
+                                <option value="L300 AB8073BI">🚐 L300 AB 8073 BI</option>
+                                <option value="AVANZA 1000 IS">🚘 Avanza AB 1000 IS</option>
+                                <option value="SUPRA 2112 IA">🛵 Supra AB 2112 IA</option>
+                                <option value="SUPRA 2112 UB">🛵 Supra AB 2112 UB</option>
+                                <option value="SUPRA 2859 IS">🛵 Supra AB 2859 IS</option>
+                                <option value="GODOOR 2422 IF">🛵 Godoor AB 2422 IF</option>
+                                <option value="GENZET">⚡ Genset</option>
                             </select>
                         </div>
 
                         <div class="form-group">
                             <label for="jenisBbm">⛽ Jenis Kupon / Voucher BBM</label>
                             <select id="jenisBbm" required>
-                                <option value="">-- Pilih Jenis BBM --</option>
+                                <option value="">⛽ -- Pilih Jenis BBM / Voucher --</option>
+                                <option value="PERTAMAX 20.000">🟢 PERTAMAX Rp20.000 (Motor)</option>
+                                <option value="PERTAMAX 100.000">🔵 PERTAMAX Rp100.000 (Mobil)</option>
+                                <option value="PERTAMAX 200.000">🔵 PERTAMAX Rp200.000 (Mobil)</option>
+                                <option value="DEXLITE 200.000">🟠 DEXLITE Rp200.000 (Bus/Genzet)</option>
                             </select>
                         </div>
 
