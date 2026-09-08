@@ -2289,7 +2289,7 @@ async function callGroqVisionOCR(base64Image, apiKey) {
         "}";
 
     const payload = {
-        model: "llama-3.2-11b-vision-preview",
+        model: "qwen/qwen3.8-27b",
         messages: [
             {
                 role: "user",
@@ -2305,6 +2305,7 @@ async function callGroqVisionOCR(base64Image, apiKey) {
             }
         ],
         response_format: { type: "json_object" },
+        max_tokens: 500,
         temperature: 0.1
     };
 
