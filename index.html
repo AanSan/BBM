@@ -79,9 +79,9 @@
             }
         }
     </script>
-    <link rel="stylesheet" href="style.css?v=5.4">
+    <link rel="stylesheet" href="style.css?v=5.6">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="app.js?v=5.4" defer></script>
+    <script src="app.js?v=5.6" defer></script>
 </head>
 
 <body
@@ -133,6 +133,16 @@
                     id="loginSubmitBtn">
                     <span class="login-btn-text">🔓 Masuk ke Sistem</span>
                     <span class="login-btn-loading" style="display: none;">⏳ Memverifikasi...</span>
+                </button>
+
+                <div class="login-divider">
+                    <span>atau</span>
+                </div>
+
+                <button type="button" id="btnPreviewApp" onclick="enterPreviewMode()"
+                    class="login-preview-btn group"
+                    title="Jelajahi dan coba seluruh fitur antarmuka tanpa perlu kata sandi">
+                    <span>👁️</span> <span>Preview Aplikasi (Tanpa Password)</span>
                 </button>
             </form>
             <div class="login-footer-text mt-6 text-center">
@@ -320,6 +330,22 @@
 
     <!-- Container Utama App -->
     <div class="w-full max-w-[1440px] mx-auto px-4 sm:px-5" id="mainContainer" style="display: none;">
+
+        <!-- Banner Mode Preview (Demo) -->
+        <div id="previewBanner" style="display: none;"
+            class="mb-3.5 p-3.5 sm:px-4 rounded-2xl bg-gradient-to-r from-amber-500/20 via-orange-500/15 to-amber-500/20 border border-amber-500/40 text-amber-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md backdrop-blur-md animate-fade-up">
+            <div class="flex items-center gap-2.5 text-xs sm:text-[13px] leading-relaxed">
+                <span class="text-xl shrink-0">👁️</span>
+                <div>
+                    <strong class="text-amber-300 font-extrabold uppercase tracking-wide">Mode Pratinjau (Preview) Aktif:</strong>
+                    <span>Anda sedang melihat pratinjau sistem tanpa password. Perubahan data disimulasikan di layar dan <span class="underline decoration-amber-400 font-bold text-amber-200">TIDAK disimpan</span> ke server database.</span>
+                </div>
+            </div>
+            <button type="button" onclick="exitPreviewMode()"
+                class="self-start sm:self-center shrink-0 px-3.5 py-1.5 rounded-xl bg-amber-500/30 hover:bg-amber-500/50 active:bg-amber-500/60 border border-amber-400/50 text-white text-xs font-extrabold transition-all duration-200 flex items-center gap-1.5 cursor-pointer shadow-sm">
+                <span>🔐</span> <span>Keluar / Login Password</span>
+            </button>
+        </div>
 
         <!-- Header Banner KPPD Bantul -->
         <header

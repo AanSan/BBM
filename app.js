@@ -1,9 +1,14 @@
 /**
-* ==============================================================
-* APP.JS — Sistem Manajemen & Rekonsiliasi Kupon BBM KPPD DIY di Kab. Bantul
-* v3 ENHANCED: Stock Opname, Manual LPJ Voucher Override, WA Reminder, Modern BA
-* ==============================================================
-*/
+ * @file app.js
+ * @description Frontend Client Web App untuk Sistem Manajemen & Rekonsiliasi Kupon BBM
+ * KPPD DIY di Kabupaten Bantul. Mengadopsi standar Airbnb JavaScript, function declaration,
+ * type coercion eksplisit, JSDoc terstruktur, serta pola pemisahan MVC (Model State, View DOM, Controller).
+ * @version 5.0.0
+ */
+
+// ==============================================================
+// 1. CONSTANTS & DOMAIN CONFIGURATION
+// ==============================================================
 
 const BBM_TYPES = [
     { name: "PERTAMAX 20.000", label: "🟢 PERTAMAX Rp20.000 (Motor)", nominalKupon: 20000 },
@@ -28,7 +33,9 @@ const KENDARAAN_RULES = [
 
 const SPREADSHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbysIPrgfB334TAe076cy1zBlHbsZUzb6WT4ZsfoqXbbcK1idGe8k5Z5decnSuRKjMFC/exec";
 
-// App Local Database States
+// ==============================================================
+// 2. MODEL LAYER (App Local Database State)
+// ==============================================================
 let databaseNota = [];
 let databaseIntransit = [];
 let databaseSaldoAwal = [];
@@ -39,49 +46,353 @@ let tempCurrentBase64 = "";
 let pendingDeleteAction = null;
 
 // === HELPER: Local date string (fix timezone bug dengan toISOString yang return UTC) ===
+/**
+ * Mendapatkan string tanggal lokal YYYY-MM-DD.
+ * @param {Date} [date] - Objek tanggal masukan.
+ * @returns {string} String format YYYY-MM-DD.
+ */
 function getLocalDateYMD(date) {
-    var d = date || new Date();
-    var year = d.getFullYear();
-    var month = String(d.getMonth() + 1).padStart(2, '0');
-    var day = String(d.getDate()).padStart(2, '0');
-    return year + '-' + month + '-' + day;
+    const d = date || new Date();
+    return `${d.getFullYear()}-${`${d.getMonth() + 1}`.padStart(2, '0')}-${`${d.getDate()}`.padStart(2, '0')}`;
 }
 
 // ============================================================
 // AUTH & PERSISTENT DEVICE CREDENTIALS MANAGEMENT (PWA AUTOLOGIN)
 // ============================================================
+/**
+ * Mengambil token autentikasi sesi.
+ * @returns {string} Token autentikasi.
+ */
 function getAuthToken() {
     return localStorage.getItem('bbm_auth_token') || sessionStorage.getItem('bbm_auth_token') || '';
 }
 
+/**
+ * Menyimpan token autentikasi sesi ke storage.
+ * @param {string} token - Token sesi.
+ */
 function setAuthToken(token) {
     if (token) {
-        localStorage.setItem('bbm_auth_token', token);
-        sessionStorage.setItem('bbm_auth_token', token);
+        localStorage.setItem('bbm_auth_token', String(token));
+        sessionStorage.setItem('bbm_auth_token', String(token));
     }
 }
 
+/**
+ * Mengambil password tersimpan dari local storage.
+ * @returns {string} Password tersimpan.
+ */
 function getSavedPassword() {
     return localStorage.getItem('bbm_saved_pwd') || '';
 }
 
+/**
+ * Menyimpan password terverifikasi ke local storage.
+ * @param {string} password - Password aplikasi.
+ */
 function setSavedPassword(password) {
     if (password) {
-        localStorage.setItem('bbm_saved_pwd', password);
+        localStorage.setItem('bbm_saved_pwd', String(password));
     }
 }
 
+/**
+ * Membersihkan seluruh sesi dan kredensial tersimpan.
+ */
 function clearAuthToken() {
     localStorage.removeItem('bbm_auth_token');
     sessionStorage.removeItem('bbm_auth_token');
     localStorage.removeItem('bbm_saved_pwd');
 }
 
+/**
+ * Memeriksa apakah perangkat memiliki sesi login aktif.
+ * @returns {boolean} Status autentikasi.
+ */
+let isPreviewMode = false;
+
+/**
+ * Memeriksa apakah aplikasi sedang berjalan dalam Mode Pratinjau (Preview / Demo).
+ * @returns {boolean}
+ */
+function isAppInPreviewMode() {
+    return isPreviewMode || sessionStorage.getItem('bbm_preview_mode') === 'true';
+}
+
+/**
+ * Memuat dataset simulasi lengkap untuk preview operasional BBM KPPD Bantul.
+ */
+function loadMockPreviewData() {
+    const today = getLocalDateString();
+    const getPastDate = (daysAgo) => {
+        const d = new Date();
+        d.setDate(d.getDate() - daysAgo);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    };
+
+    databaseSaldoAwal = [
+        { barang: 'PERTAMAX 20.000', kupon: 60, jumlah: 1200000 },
+        { barang: 'PERTAMAX 100.000', kupon: 40, jumlah: 4000000 },
+        { barang: 'PERTAMAX 200.000', kupon: 70, jumlah: 14000000 },
+        { barang: 'DEXLITE 200.000', kupon: 35, jumlah: 7000000 }
+    ];
+
+    databasePembelian = [
+        { bulan: 'Agustus 2026', barang: 'PERTAMAX 200.000', kupon: 25, jumlah: 5000000 },
+        { bulan: 'Agustus 2026', barang: 'DEXLITE 200.000', kupon: 15, jumlah: 3000000 },
+        { bulan: 'Juli 2026', barang: 'PERTAMAX 100.000', kupon: 30, jumlah: 3000000 },
+        { bulan: 'Juli 2026', barang: 'PERTAMAX 20.000', kupon: 40, jumlah: 800000 }
+    ];
+
+    databaseNota = [
+        {
+            no: 'NOTA-001',
+            tanggal: today,
+            bbm: 'PERTAMAX 200.000',
+            plat: 'AVANZA 86 B',
+            total: 400000,
+            kupon: 2,
+            pemohon: 'Bp. Hendra',
+            idPinjam: 'REQ-1001',
+            fotoUrl: ''
+        },
+        {
+            no: 'NOTA-002',
+            tanggal: getPastDate(1),
+            bbm: 'DEXLITE 200.000',
+            plat: 'SAMLING 7110 UA',
+            total: 400000,
+            kupon: 2,
+            pemohon: 'Bp. Sugeng',
+            idPinjam: 'REQ-1002',
+            fotoUrl: ''
+        },
+        {
+            no: 'NOTA-003',
+            tanggal: getPastDate(2),
+            bbm: 'PERTAMAX 100.000',
+            plat: 'JEMPOL 1132 BI',
+            total: 200000,
+            kupon: 2,
+            pemohon: 'Ibu Rini',
+            idPinjam: 'REQ-1003',
+            fotoUrl: ''
+        },
+        {
+            no: 'NOTA-004',
+            tanggal: getPastDate(3),
+            bbm: 'PERTAMAX 200.000',
+            plat: 'PICK UP 8243 UA',
+            total: 200000,
+            kupon: 1,
+            pemohon: 'Bp. Joko',
+            idPinjam: 'REQ-1004',
+            fotoUrl: ''
+        },
+        {
+            no: 'NOTA-005',
+            tanggal: getPastDate(4),
+            bbm: 'PERTAMAX 20.000',
+            plat: 'SUPRA 2112 IA',
+            total: 40000,
+            kupon: 2,
+            pemohon: 'Bp. Tri',
+            idPinjam: '',
+            fotoUrl: ''
+        },
+        {
+            no: 'NOTA-006',
+            tanggal: getPastDate(5),
+            bbm: 'DEXLITE 200.000',
+            plat: 'L300 AB8073BI',
+            total: 200000,
+            kupon: 1,
+            pemohon: 'Bp. Bambang',
+            idPinjam: '',
+            fotoUrl: ''
+        },
+        {
+            no: 'NOTA-007',
+            tanggal: getPastDate(6),
+            bbm: 'PERTAMAX 200.000',
+            plat: 'AVANZA 1000 IS',
+            total: 400000,
+            kupon: 2,
+            pemohon: 'Ibu Maya',
+            idPinjam: '',
+            fotoUrl: ''
+        },
+        {
+            no: 'NOTA-008',
+            tanggal: getPastDate(8),
+            bbm: 'DEXLITE 200.000',
+            plat: 'GENZET',
+            total: 400000,
+            kupon: 2,
+            pemohon: 'Bp. Agus',
+            idPinjam: '',
+            fotoUrl: ''
+        }
+    ];
+
+    databaseIntransit = [
+        {
+            id: 'REQ-2001',
+            tanggal: today,
+            pemohon: 'Bp. Hendra',
+            plat: 'AVANZA 86 B',
+            bbm: 'PERTAMAX 200.000',
+            kupon: 2,
+            status: 'PENDING'
+        },
+        {
+            id: 'REQ-2002',
+            tanggal: getPastDate(2),
+            pemohon: 'Ibu Rini',
+            plat: 'JEMPOL 1132 BI',
+            bbm: 'PERTAMAX 100.000',
+            kupon: 1,
+            status: 'PENDING'
+        },
+        {
+            id: 'REQ-2003',
+            tanggal: getPastDate(5),
+            pemohon: 'Bp. Sugeng',
+            plat: 'SAMLING 7110 UA',
+            bbm: 'DEXLITE 200.000',
+            kupon: 2,
+            status: 'PENDING'
+        },
+        {
+            id: 'REQ-1001',
+            tanggal: getPastDate(7),
+            pemohon: 'Bp. Hendra',
+            plat: 'AVANZA 86 B',
+            bbm: 'PERTAMAX 200.000',
+            kupon: 2,
+            status: 'SELESAI'
+        }
+    ];
+
+    databaseOpname = [
+        {
+            tanggal: getPastDate(10),
+            keterangan: 'Opname Fisik Brankas Bulanan',
+            bbm: 'PERTAMAX 200.000',
+            stokSistem: 55,
+            hitungFisik: 55,
+            selisih: 0
+        },
+        {
+            tanggal: getPastDate(10),
+            keterangan: 'Opname Fisik Brankas Bulanan',
+            bbm: 'DEXLITE 200.000',
+            stokSistem: 28,
+            hitungFisik: 28,
+            selisih: 0
+        }
+    ];
+}
+
+/**
+ * Menyiapkan dataset untuk Mode Pratinjau.
+ * Mengutamakan salinan mendalam (deep copy) dari cache lokal jika ada,
+ * atau memuat dataset demo interaktif lengkap KPPD Bantul.
+ */
+function setupPreviewData() {
+    let hasLoadedFromCache = false;
+    try {
+        const raw = localStorage.getItem('bbm_cached_db');
+        if (raw) {
+            const cache = JSON.parse(raw);
+            if (cache && Array.isArray(cache.nota) && cache.nota.length > 0) {
+                databaseNota = JSON.parse(JSON.stringify(cache.nota || []));
+                databaseIntransit = JSON.parse(JSON.stringify(cache.intransit || []));
+                databaseSaldoAwal = JSON.parse(JSON.stringify(cache.saldoAwal || []));
+                databasePembelian = JSON.parse(JSON.stringify(cache.pembelian || []));
+                databaseOpname = JSON.parse(JSON.stringify(cache.opname || []));
+                hasLoadedFromCache = true;
+            }
+        }
+    } catch (e) {
+        console.warn("[Preview] Gagal membaca cache lokal:", e);
+    }
+
+    if (!hasLoadedFromCache) {
+        loadMockPreviewData();
+    }
+}
+
+/**
+ * Memasuki Mode Pratinjau tanpa perlu memasukkan password.
+ * Dalam mode ini seluruh mutasi data disimulasikan secara lokal dan TIDAK disimpan ke server/Google Sheets.
+ */
+function enterPreviewMode() {
+    isPreviewMode = true;
+    sessionStorage.setItem('bbm_preview_mode', 'true');
+
+    // Sembunyikan pesan kesalahan login jika ada
+    const errorDiv = document.getElementById('loginError');
+    if (errorDiv) {
+        errorDiv.textContent = '';
+        errorDiv.style.display = 'none';
+    }
+
+    // Tampilkan antarmuka aplikasi utama
+    showMainApp();
+
+    // Pastikan banner preview ditampilkan
+    const banner = document.getElementById('previewBanner');
+    if (banner) banner.style.display = 'flex';
+
+    // Inisialisasi data untuk mode preview
+    setupPreviewData();
+
+    // Set status jaringan ke indikator pratinjau
+    setNetworkStatus('preview', 'Mode Preview (Demo)');
+    updateSyncButtonState(false);
+
+    // Refresh UI, tabel, form, dan analitik
+    populateDropdownIntransit();
+    renderTabel();
+    renderTabelIntransit();
+    renderTabelPembelian();
+    renderTabelOpname();
+    renderOpnameFormInputs();
+    hitungDanRenderSummary();
+    populateAnalyticsYearFilter();
+    renderAnalyticsDashboard();
+
+    showToast('👁️ Masuk ke Mode Pratinjau. Anda dapat mencoba seluruh fitur tanpa menyimpan data ke server.', 'info', 5000);
+}
+
+/**
+ * Keluar dari Mode Pratinjau dan kembali ke layar login utama.
+ */
+function exitPreviewMode() {
+    isPreviewMode = false;
+    sessionStorage.removeItem('bbm_preview_mode');
+
+    const banner = document.getElementById('previewBanner');
+    if (banner) banner.style.display = 'none';
+
+    showLoginScreen();
+    showToast('🚪 Anda telah keluar dari Mode Pratinjau.', 'info');
+}
+
+/**
+ * Memeriksa apakah perangkat memiliki sesi login aktif.
+ * @returns {boolean} Status autentikasi.
+ */
 function isLoggedIn() {
-    return !!getAuthToken() || !!getSavedPassword();
+    return Boolean(getAuthToken()) || Boolean(getSavedPassword()) || isAppInPreviewMode();
 }
 
 async function silentAutoRelogin() {
+    if (isAppInPreviewMode()) return false;
     const savedPwd = getSavedPassword();
     if (!savedPwd || !SPREADSHEET_WEBAPP_URL) return false;
     try {
@@ -106,6 +417,9 @@ function showLoginScreen() {
     const main = document.getElementById('mainContainer');
     if (login) login.style.display = 'flex';
     if (main) main.style.display = 'none';
+
+    const banner = document.getElementById('previewBanner');
+    if (banner) banner.style.display = 'none';
 
     // Auto-fill password input if previously saved on device
     const pwdInput = document.getElementById('loginPassword');
@@ -133,10 +447,17 @@ function showMainApp() {
     const main = document.getElementById('mainContainer');
     if (login) login.style.display = 'none';
     if (main) main.style.display = '';
+
+    const banner = document.getElementById('previewBanner');
+    if (banner) {
+        banner.style.display = isAppInPreviewMode() ? 'flex' : 'none';
+    }
+
     handleUrlShortcutAction();
 }
 
 async function handleAuthError() {
+    if (isAppInPreviewMode()) return;
     const reloginOk = await silentAutoRelogin();
     if (reloginOk) {
         muatDataDariSpreadsheet(false);
@@ -148,6 +469,10 @@ async function handleAuthError() {
 }
 
 function handleLogout() {
+    if (isAppInPreviewMode()) {
+        exitPreviewMode();
+        return;
+    }
     clearAuthToken();
     const pwdInput = document.getElementById('loginPassword');
     if (pwdInput) pwdInput.value = '';
@@ -279,11 +604,16 @@ function setNetworkStatus(status, customText = null) {
         dot.className = "w-2 h-2 bg-rose-500 rounded-full shadow-[0_0_8px_#f43f5e]";
         text.textContent = customText || "Mode Offline";
         badge.title = "Koneksi terputus. Menggunakan data lokal.";
+    } else if (status === 'preview') {
+        dot.className = "w-2 h-2 bg-cyan-400 rounded-full shadow-[0_0_8px_#22d3ee] animate-pulse";
+        text.textContent = customText || "Mode Preview (Demo)";
+        badge.title = "Mode Pratinjau: Data simulasi lokal tanpa simpan ke server";
     }
 }
 
 // Queue offline requests (with deduplication)
 function enqueueOfflineAction(payload) {
+    if (isAppInPreviewMode()) return;
     try {
         const queue = JSON.parse(localStorage.getItem('bbm_offline_queue') || '[]');
 
@@ -313,7 +643,7 @@ let isProcessingOfflineQueue = false;
 
 // Process offline queue when online
 async function prosesOfflineQueue() {
-    if (!navigator.onLine || !SPREADSHEET_WEBAPP_URL || isProcessingOfflineQueue) return;
+    if (isAppInPreviewMode() || !navigator.onLine || !SPREADSHEET_WEBAPP_URL || isProcessingOfflineQueue) return;
     try {
         const rawQueue = localStorage.getItem('bbm_offline_queue');
         if (!rawQueue) return;
@@ -356,6 +686,11 @@ async function prosesOfflineQueue() {
 
 // Auto-retry fetch helper with timeout
 async function fetchWithAuth(payload, maxRetries = 2, timeoutMs = 15000, isQueueProcess = false) {
+    if (isAppInPreviewMode()) {
+        console.info("[Preview Mode] Aksi dicegah dari pengiriman ke server:", payload ? payload.action : 'unknown');
+        showToast("ℹ️ Mode Preview: Simulasi lokal berhasil (data TIDAK disimpan ke server/Google Sheets).", "info");
+        return { status: 'success', preview: true };
+    }
     if (!SPREADSHEET_WEBAPP_URL) return null;
     payload.token = getAuthToken();
 
@@ -434,39 +769,49 @@ const BADGE_CLASS_MAP = {
     'PERTAMINA DEX 200.000': 'badge-dexlite'
 };
 
+/**
+ * Membersihkan string label BBM untuk tampilan UI.
+ * @param {string} name - Nama BBM mentah.
+ * @returns {string} Nama BBM bersih.
+ */
 function cleanBbmDisplay(name) {
     if (!name) return '';
-    let str = String(name).replace(/\s*\(SPBU\s+PIRAMID\)/gi, '').trim();
-    if (str.toUpperCase().includes('PERTAMINA DEX') || str.toUpperCase().includes('DEXLITE')) {
-        return 'DEXLITE 200.000';
-    }
-    return str;
-}
+    const str = `${name}`.replace(/\s*\(SPBU\s+PIRAMID\)/gi, '').trim();
+    return (str.toUpperCase().includes('PERTAMINA DEX') || str.toUpperCase().includes('DEXLITE'))
+        ? 'DEXLITE 200.000'
+        : str;
+};
 
+/**
+ * Mencegah serangan XSS dengan melakukan HTML entity escaping.
+ * @param {string} str - Teks mentah.
+ * @returns {string} Teks aman yang telah di-escape.
+ */
 function escapeHTML(str) {
     if (str === null || str === undefined) return '';
-    return String(str)
+    return `${str}`
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
-}
+};
 
+/**
+ * Format tanggal string ISO ke format Indonesia DD/MM/YYYY.
+ * @param {string} str - String tanggal.
+ * @returns {string} String DD/MM/YYYY.
+ */
 function formatTanggalIndo(str) {
     if (!str) return '-';
-    var cleanStr = String(str).trim().split('T')[0];
-    var parts = cleanStr.split(/[-/]/);
+    const cleanStr = `${str}`.trim().split('T')[0];
+    const parts = cleanStr.split(/[-/]/);
     if (parts.length === 3) {
-        if (parts[0].length === 4) {
-            return parts[2].padStart(2, '0') + '/' + parts[1].padStart(2, '0') + '/' + parts[0];
-        }
-        if (parts[2].length === 4) {
-            return parts[0].padStart(2, '0') + '/' + parts[1].padStart(2, '0') + '/' + parts[2];
-        }
+        if (parts[0].length === 4) return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
+        if (parts[2].length === 4) return `${parts[0].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[2]}`;
     }
     return cleanStr;
-}
+};
 
 function showToast(message, type = 'info') {
     const container = document.getElementById('toastContainer');
@@ -475,10 +820,8 @@ function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `toast-item toast-${type}`;
 
-    let icon = 'ℹ️';
-    if (type === 'success') icon = '✅';
-    if (type === 'error') icon = '⚠️';
-    if (type === 'warning') icon = '🔔';
+    const iconMap = { success: '✅', error: '⚠️', warning: '🔔' };
+    const icon = iconMap[type] || 'ℹ️';
 
     toast.innerHTML = `<span>${icon}</span> <span>${escapeHTML(message)}</span>`;
     container.appendChild(toast);
@@ -537,19 +880,29 @@ function populateVehicleAndBbmDropdowns() {
     applyCustomSelectToAll();
 }
 
+/**
+ * Mendapatkan nilai rupiah per kupon BBM.
+ * @param {string} namaBbm - Nama BBM.
+ * @returns {number} Nominal kupon dalam rupiah.
+ */
 function getNominalPerKupon(namaBbm) {
     if (!namaBbm) return 20000;
-    var str = String(namaBbm).toUpperCase();
+    const str = `${namaBbm}`.toUpperCase();
     if (str.includes("100.000")) return 100000;
     if (str.includes("200.000")) return 200000;
     if (str.includes("20.000")) return 20000;
     if (str.includes("DEXLITE") || str.includes("DEX")) return 200000;
     return 20000;
-}
+};
 
+/**
+ * Mencocokkan nama BBM masukan dengan nama resmi canonical BBM.
+ * @param {string} namaBbm - Nama BBM input.
+ * @returns {string} Nama resmi BBM.
+ */
 function matchBbmKey(namaBbm) {
     if (!namaBbm) return "PERTAMAX 20.000";
-    const upper = String(namaBbm).toUpperCase().trim();
+    const upper = `${namaBbm}`.toUpperCase().trim();
     if (upper.includes("DEX") || upper.includes("DEXLITE")) return "DEXLITE 200.000";
     if (upper.includes("100.000") || upper.includes("100000")) return "PERTAMAX 100.000";
     if (upper.includes("200.000") || upper.includes("200000")) return "PERTAMAX 200.000";
@@ -557,9 +910,8 @@ function matchBbmKey(namaBbm) {
     const exact = BBM_TYPES.find(t => t.name.toUpperCase() === upper);
     if (exact) return exact.name;
     const partial = BBM_TYPES.find(t => upper.includes(t.name.toUpperCase()) || t.name.toUpperCase().includes(upper));
-    if (partial) return partial.name;
-    return "PERTAMAX 20.000";
-}
+    return partial ? partial.name : "PERTAMAX 20.000";
+};
 
 // ============================================================
 // HITUNG STOK PER JENIS BBM (TERMASUK OPNAME ADJUSTMENT)
@@ -635,6 +987,12 @@ function hitungStokPerJenis() {
     return stokMap;
 }
 
+/**
+ * Menghasilkan markup HTML skeleton loader untuk tabel.
+ * @param {number} [cols=8] - Jumlah kolom.
+ * @param {number} [count=4] - Jumlah baris placeholder.
+ * @returns {string} Markup baris tabel skeleton.
+ */
 function getSkeletonRowsHtml(cols = 8, count = 4) {
     let rowsHtml = '';
     for (let r = 0; r < count; r++) {
@@ -646,7 +1004,7 @@ function getSkeletonRowsHtml(cols = 8, count = 4) {
         rowsHtml += `<tr class="skeleton-row">${colsHtml}</tr>`;
     }
     return rowsHtml;
-}
+};
 
 function tampilkanSkeletonLoading() {
     const tbodyNota = document.getElementById('tabelBody');
@@ -661,6 +1019,7 @@ function tampilkanSkeletonLoading() {
 }
 
 function simpanCacheLokalData() {
+    if (isAppInPreviewMode()) return;
     try {
         const cacheObj = {
             nota: databaseNota,
@@ -713,6 +1072,22 @@ function updateSyncButtonState(isSyncing) {
 }
 
 async function muatDataDariSpreadsheet(showSkeleton = true) {
+    if (isAppInPreviewMode()) {
+        populateDropdownIntransit();
+        renderTabel();
+        renderTabelIntransit();
+        renderTabelPembelian();
+        renderTabelOpname();
+        renderOpnameFormInputs();
+        hitungDanRenderSummary();
+        populateAnalyticsYearFilter();
+        renderAnalyticsDashboard();
+        setNetworkStatus('preview', 'Mode Preview (Demo)');
+        updateSyncButtonState(false);
+        showToast('ℹ️ Mode Preview: Menampilkan data simulasi lokal.', 'info');
+        return;
+    }
+
     if (!SPREADSHEET_WEBAPP_URL) return;
 
     // Load from local cache immediately (Stale-While-Revalidate)
@@ -995,7 +1370,11 @@ window.addEventListener('popstate', () => {
 });
 
 // Universal Backdrop Overlay / Click Outside Handler
-const handleBackdropTapOutside = (e) => {
+/**
+ * Event handler untuk menutup modal saat backdrop diklik.
+ * @param {MouseEvent|TouchEvent} e - Event klik/tap.
+ */
+function handleBackdropTapOutside(e) {
     // 1. Custom Selects
     document.querySelectorAll('.custom-select-wrapper.open').forEach(wrapper => {
         const popover = wrapper.querySelector('.custom-select-popover');
@@ -1435,17 +1814,15 @@ function renderTabel() {
         totalNominalFilter += nominal;
         totalKuponFilter += jmlKupon;
 
+        const originalIndex = databaseNota.indexOf(item);
         const badgeClass = BADGE_CLASS_MAP[item.bbm] || 'badge-default';
         let tombolFotoHtml = `<span style="color:#94a3b8; font-size:11px;">Tanpa Foto</span>`;
 
         if (item.fotoUrl && String(item.fotoUrl).startsWith("http")) {
             tombolFotoHtml = `<a href="${encodeURI(item.fotoUrl)}" target="_blank" class="btn-view-photo">🔗 Drive</a>`;
         } else if (item.foto && String(item.foto).startsWith("data:image")) {
-            const originalIndex = databaseNota.indexOf(item);
             tombolFotoHtml = `<button class="btn-view-photo" onclick="bukaModalFoto(${originalIndex})">👁️ Pratinjau</button>`;
         }
-
-        const originalIndex = databaseNota.indexOf(item);
         const aksiHtml = `
             <div style="display:flex; gap:4px; justify-content:center;">
                 <button class="btn-view-photo" onclick="bukaEditNota(${originalIndex})">✏️</button>
@@ -1605,7 +1982,7 @@ function populateAnalyticsYearFilter() {
     const years = new Set();
     databaseNota.forEach(item => {
         if (item.tanggal) {
-            const y = String(item.tanggal).split('-')[0];
+            const y = `${item.tanggal}`.split('-')[0];
             if (y && y.length === 4) years.add(y);
         }
     });
@@ -1633,7 +2010,7 @@ function renderAnalyticsDashboard(filterYear = null) {
 
     let filteredData = [...databaseNota];
     if (selectedYear && selectedYear !== 'semua') {
-        filteredData = filteredData.filter(item => item.tanggal && String(item.tanggal).startsWith(selectedYear));
+        filteredData = filteredData.filter(item => item.tanggal && `${item.tanggal}`.startsWith(selectedYear));
     }
 
     // 1. KPI Aggregations
@@ -1663,7 +2040,7 @@ function renderAnalyticsDashboard(filterYear = null) {
 
         // Monthly breakdown
         if (item.tanggal) {
-            const parts = String(item.tanggal).split('-');
+            const parts = `${item.tanggal}`.split('-');
             if (parts.length >= 2) {
                 const monthIdx = parseInt(parts[1], 10) - 1;
                 if (monthIdx >= 0 && monthIdx < 12) {
@@ -1675,7 +2052,7 @@ function renderAnalyticsDashboard(filterYear = null) {
         }
 
         // Vehicle breakdown
-        const plat = item.plat ? String(item.plat).toUpperCase().trim() : 'KANTOR';
+        const plat = item.plat ? `${item.plat}`.toUpperCase().trim() : 'KANTOR';
         if (!vehicleMap[plat]) {
             vehicleMap[plat] = { rp: 0, kupon: 0, count: 0 };
         }
@@ -2142,27 +2519,26 @@ function setQuickDateFilter(preset) {
     document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
 
     const today = new Date();
-    const formatYMD = (d) => getLocalDateYMD(d);
 
     if (preset === 'semua') {
         tglMulai.value = '';
         tglSelesai.value = '';
         document.getElementById('btnPresetSemua')?.classList.add('active');
     } else if (preset === 'today') {
-        tglMulai.value = formatYMD(today);
-        tglSelesai.value = formatYMD(today);
+        tglMulai.value = getLocalDateYMD(today);
+        tglSelesai.value = getLocalDateYMD(today);
         document.getElementById('btnPresetToday')?.classList.add('active');
     } else if (preset === 'thisMonth') {
         const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
         const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-        tglMulai.value = formatYMD(firstDay);
-        tglSelesai.value = formatYMD(lastDay);
+        tglMulai.value = getLocalDateYMD(firstDay);
+        tglSelesai.value = getLocalDateYMD(lastDay);
         document.getElementById('btnPresetThisMonth')?.classList.add('active');
     } else if (preset === 'lastMonth') {
         const firstDayLast = new Date(today.getFullYear(), today.getMonth() - 1, 1);
         const lastDayLast = new Date(today.getFullYear(), today.getMonth(), 0);
-        tglMulai.value = formatYMD(firstDayLast);
-        tglSelesai.value = formatYMD(lastDayLast);
+        tglMulai.value = getLocalDateYMD(firstDayLast);
+        tglSelesai.value = getLocalDateYMD(lastDayLast);
         document.getElementById('btnPresetLastMonth')?.classList.add('active');
     }
     renderTabel();
@@ -2202,91 +2578,106 @@ function scrollToFilterMenu() {
 // ============================================================
 // CLIENT-SIDE IMAGE COMPRESSION & OPTIMIZATION (MOBILE PERFORMA)
 // ============================================================
+/**
+ * Mengompresi file foto nota sebelum diunggah ke Google Drive.
+ * @param {File} file - File gambar.
+ * @param {number} [maxWidth=1280] - Lebar maksimal.
+ * @param {number} [maxHeight=1280] - Tinggi maksimal.
+ * @param {number} [quality=0.78] - Kualitas JPEG kompresi.
+ * @returns {Promise<string>} Base64 data URL gambar yang telah dikompresi.
+ */
 function compressImageFile(file, maxWidth = 1280, maxHeight = 1280, quality = 0.78) {
     return new Promise((resolve, reject) => {
-        if (!file || !file.type || !file.type.startsWith('image/')) {
-            reject(new Error("File bukan gambar valid"));
-            return;
-        }
+    if (!file || !file.type || !file.type.startsWith('image/')) {
+        reject(new Error("File bukan gambar valid"));
+        return;
+    }
 
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-            const img = new Image();
-            img.onload = () => {
-                let width = img.width;
-                let height = img.height;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+        const img = new Image();
+        img.onload = () => {
+            let width = img.width;
+            let height = img.height;
 
-                if (width > maxWidth || height > maxHeight) {
-                    if (width / height > maxWidth / maxHeight) {
-                        height = Math.round((height * maxWidth) / width);
-                        width = maxWidth;
-                    } else {
-                        width = Math.round((width * maxHeight) / height);
-                        height = maxHeight;
-                    }
+            if (width > maxWidth || height > maxHeight) {
+                if (width / height > maxWidth / maxHeight) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
+                } else {
+                    width = Math.round((width * maxHeight) / height);
+                    height = maxHeight;
                 }
+            }
 
-                const canvas = document.createElement('canvas');
-                canvas.width = width;
-                canvas.height = height;
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
 
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
 
-                const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
-                resolve(compressedBase64);
-            };
-            img.onerror = (err) => reject(err);
-            img.src = evt.target.result;
+            const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+            resolve(compressedBase64);
         };
-        reader.onerror = (err) => reject(err);
-        reader.readAsDataURL(file);
+        img.onerror = (err) => reject(err);
+        img.src = evt.target.result;
+    };
+    reader.onerror = (err) => reject(err);
+    reader.readAsDataURL(file);
     });
 }
 
+/**
+ * Fungsi debounce untuk membatasi frekuensi pemanggilan event.
+ * @param {Function} func - Fungsi target.
+ * @param {number} [wait=250] - Waktu tunggu dalam milidetik.
+ * @returns {Function} Fungsi ter-debounce.
+ */
 function debounce(func, wait = 250) {
     let timeout;
-    return function (...args) {
+    return (...args) => {
         clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(this, args), wait);
+        timeout = setTimeout(() => func(...args), wait);
     };
-}
+};
 
 // ============================================================
 // ============================================================
 // AI OCR SCANNER (GROQ VISION VIA GOOGLE APPS SCRIPT BACKEND)
 // ============================================================
 
+// === HELPER: Generate OCR Prompt secara dinamis dari KENDARAAN_RULES & BBM_TYPES ===
+/**
+ * Menyusun prompt terstruktur untuk Groq Vision AI.
+ * @returns {string} Prompt teks OCR.
+ */
+function buildOcrPrompt() {
+    const vehicleList = KENDARAAN_RULES.map(r => `- ${r.plat} (BBM: ${r.bbm})`).join('\n');
+    const bbmList = BBM_TYPES.map(t => `- ${t.name}`).join('\n');
+    return `Kamu adalah sistem OCR dan analisis cerdas struk/nota pembelian BBM SPBU (Pertamina/Shell/dll) di Indonesia untuk instansi Samsat / KPPD DIY Bantul.
+Tugasmu adalah membaca dan mengekstrak informasi transaksi dari foto struk/nota SPBU ini secara teliti dan akurat.
+
+Daftar kendaraan dinas resmi:
+${vehicleList}
+
+Daftar Jenis Kupon BBM:
+${bbmList}
+
+Keluarkan output dalam format JSON murni dengan struktur berikut:
+{
+  "tanggal": "YYYY-MM-DD",
+  "noTransaksi": "nomor transaksi atau nomor struk",
+  "total": 200000,
+  "platNomor": "nama plat dari daftar kendaraan resmi di atas yang cocok",
+  "jenisBbm": "nama salah satu jenis kupon BBM dari daftar di atas yang paling sesuai",
+  "volumeLiter": 15.42
+}`;
+};
+
 async function callGroqVisionOCR(base64Image, apiKey) {
     const base64Data = base64Image.indexOf(',') > -1 ? base64Image.split(',')[1] : base64Image;
-    const prompt = "Kamu adalah sistem OCR dan analisis cerdas struk/nota pembelian BBM SPBU (Pertamina/Shell/dll) di Indonesia untuk instansi Samsat / KPPD DIY Bantul.\n" +
-        "Tugasmu adalah membaca dan mengekstrak informasi transaksi dari foto struk/nota SPBU ini secara teliti dan akurat.\n\n" +
-        "Daftar kendaraan dinas resmi:\n" +
-        "- AVANZA 86 B (Plat AB 86 B, BBM: PERTAMAX 200.000)\n" +
-        "- JEMPOL 1132 BI (Plat AB 1132 BI, BBM: PERTAMAX 100.000)\n" +
-        "- PICK UP 8243 UA (Plat AB 8243 UA, BBM: PERTAMAX 200.000)\n" +
-        "- SAMLING 7110 UA (Plat AB 7110 UA, BBM: DEXLITE 200.000)\n" +
-        "- L300 AB8073BI (Plat AB 8073 BI, BBM: DEXLITE 200.000)\n" +
-        "- AVANZA 1000 IS (Plat AB 1000 IS, BBM: PERTAMAX 200.000)\n" +
-        "- SUPRA 2112 IA (Plat AB 2112 IA, BBM: PERTAMAX 20.000)\n" +
-        "- SUPRA 2112 UB (Plat AB 2112 UB, BBM: PERTAMAX 20.000)\n" +
-        "- SUPRA 2859 IS (Plat AB 2859 IS, BBM: PERTAMAX 20.000)\n" +
-        "- GODOOR 2422 IF (Plat AB 2422 IF, BBM: PERTAMAX 20.000)\n" +
-        "- GENZET (Genset Kantor, BBM: DEXLITE 200.000)\n\n" +
-        "Daftar Jenis Kupon BBM:\n" +
-        "- PERTAMAX 20.000\n" +
-        "- PERTAMAX 100.000\n" +
-        "- PERTAMAX 200.000\n" +
-        "- DEXLITE 200.000\n\n" +
-        "Keluarkan output dalam format JSON murni dengan struktur berikut:\n" +
-        "{\n" +
-        "  \"tanggal\": \"YYYY-MM-DD\",\n" +
-        "  \"noTransaksi\": \"nomor transaksi atau nomor struk\",\n" +
-        "  \"total\": 200000,\n" +
-        "  \"platNomor\": \"nama plat dari daftar kendaraan resmi di atas yang cocok\",\n" +
-        "  \"jenisBbm\": \"nama salah satu jenis kupon BBM dari daftar di atas yang paling sesuai\",\n" +
-        "  \"volumeLiter\": 15.42\n" +
-        "}";
+    const prompt = buildOcrPrompt();
 
     const payload = {
         model: "qwen/qwen3.8-27b",
@@ -2395,7 +2786,7 @@ async function triggerGroqOcrScan(base64Image) {
         if (data.noTransaksi) {
             const noEl = document.getElementById('noTransaksi');
             if (noEl) {
-                noEl.value = String(data.noTransaksi).trim();
+                noEl.value = `${data.noTransaksi || ''}`.trim();
                 noEl.dispatchEvent(new Event('input', { bubbles: true }));
                 noEl.dispatchEvent(new Event('change', { bubbles: true }));
             }
@@ -2412,39 +2803,14 @@ async function triggerGroqOcrScan(base64Image) {
         }
 
         // 4. Match Plat Kendaraan (Normalisasi deteksi karakter struk thermal)
-        const combinedPlatStr = (String(data.platNomor || "") + " " + JSON.stringify(data)).toUpperCase().replace(/[^A-Z0-9]/g, "");
-        let matchedVehicle = null;
+        const combinedPlatStr = `${data.platNomor || ''} ${JSON.stringify(data)}`.toUpperCase().replace(/[^A-Z0-9]/g, "");
 
-        if (combinedPlatStr.includes("86B") || (combinedPlatStr.includes("86") && combinedPlatStr.includes("AVANZA"))) {
-            matchedVehicle = KENDARAAN_RULES.find(r => r.plat === "AVANZA 86 B");
-        } else if (combinedPlatStr.includes("1132") || combinedPlatStr.includes("JEMPOL")) {
-            matchedVehicle = KENDARAAN_RULES.find(r => r.plat === "JEMPOL 1132 BI");
-        } else if (combinedPlatStr.includes("8243") || combinedPlatStr.includes("PICKUP") || combinedPlatStr.includes("PICK UP")) {
-            matchedVehicle = KENDARAAN_RULES.find(r => r.plat === "PICK UP 8243 UA");
-        } else if (combinedPlatStr.includes("7110") || combinedPlatStr.includes("SAMLING")) {
-            matchedVehicle = KENDARAAN_RULES.find(r => r.plat === "SAMLING 7110 UA");
-        } else if (combinedPlatStr.includes("8073") || combinedPlatStr.includes("L300")) {
-            matchedVehicle = KENDARAAN_RULES.find(r => r.plat === "L300 AB8073BI");
-        } else if (combinedPlatStr.includes("1000IS") || (combinedPlatStr.includes("1000") && combinedPlatStr.includes("AVANZA"))) {
-            matchedVehicle = KENDARAAN_RULES.find(r => r.plat === "AVANZA 1000 IS");
-        } else if (combinedPlatStr.includes("2112IA") || (combinedPlatStr.includes("2112") && combinedPlatStr.includes("IA"))) {
-            matchedVehicle = KENDARAAN_RULES.find(r => r.plat === "SUPRA 2112 IA");
-        } else if (combinedPlatStr.includes("2112UB") || (combinedPlatStr.includes("2112") && combinedPlatStr.includes("UB"))) {
-            matchedVehicle = KENDARAAN_RULES.find(r => r.plat === "SUPRA 2112 UB");
-        } else if (combinedPlatStr.includes("2859") || combinedPlatStr.includes("2859IS")) {
-            matchedVehicle = KENDARAAN_RULES.find(r => r.plat === "SUPRA 2859 IS");
-        } else if (combinedPlatStr.includes("2422") || combinedPlatStr.includes("GODOOR")) {
-            matchedVehicle = KENDARAAN_RULES.find(r => r.plat === "GODOOR 2422 IF");
-        } else if (combinedPlatStr.includes("GENSET") || combinedPlatStr.includes("GENZET")) {
-            matchedVehicle = KENDARAAN_RULES.find(r => r.plat === "GENZET");
-        } else {
-            matchedVehicle = KENDARAAN_RULES.find(r => {
-                const cleanPlat = r.plat.toUpperCase().replace(/[^A-Z0-9]/g, "");
-                if (combinedPlatStr.includes(cleanPlat)) return true;
-                if (r.keywords && r.keywords.some(kw => combinedPlatStr.includes(kw.toUpperCase().replace(/[^A-Z0-9]/g, "")))) return true;
-                return false;
-            });
-        }
+        // Vehicle matching data-driven via KENDARAAN_RULES keywords (urutan array = prioritas)
+        const matchedVehicle = KENDARAAN_RULES.find(rule =>
+            rule.keywords.some(kw => combinedPlatStr.includes(kw.toUpperCase().replace(/[^A-Z0-9]/g, "")))
+        ) || KENDARAAN_RULES.find(rule =>
+            combinedPlatStr.includes(rule.plat.toUpperCase().replace(/[^A-Z0-9]/g, ""))
+        ) || null;
 
         const platEl = document.getElementById('platNomor');
         if (platEl && matchedVehicle) {
@@ -2458,7 +2824,7 @@ async function triggerGroqOcrScan(base64Image) {
         if (matchedVehicle && matchedVehicle.bbm) {
             matchedBbmName = matchedVehicle.bbm;
         } else {
-            const rawBbm = String(data.jenisBbm || "").toUpperCase();
+            const rawBbm = `${data.jenisBbm || ''}`.toUpperCase();
             const total = Number(data.total) || 0;
             if (rawBbm.includes("DEX") || rawBbm.includes("SOLAR") || rawBbm.includes("DIESEL")) {
                 matchedBbmName = "DEXLITE 200.000";
@@ -2674,7 +3040,7 @@ function bukaModalCetakBA() {
     const today = new Date();
     const hariArr = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
     const bulanArr = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-    const tglIndoStr = `${hariArr[today.getDay()]}, ${String(today.getDate()).padStart(2, '0')} ${bulanArr[today.getMonth()]} ${today.getFullYear()}`;
+    const tglIndoStr = `${hariArr[today.getDay()]}, ${`${today.getDate()}`.padStart(2, '0')} ${bulanArr[today.getMonth()]} ${today.getFullYear()}`;
 
     const baHariTanggal = document.getElementById('baHariTanggal');
     if (baHariTanggal) baHariTanggal.textContent = tglIndoStr;
@@ -2840,8 +3206,8 @@ function renderCustomDatePicker(inputId) {
         const todayStr = getLocalDateYMD();
 
         for (let day = 1; day <= lastDateOfMonth; day++) {
-            const mStr = String(month + 1).padStart(2, '0');
-            const dStr = String(day).padStart(2, '0');
+            const mStr = `${month + 1}`.padStart(2, '0');
+            const dStr = `${day}`.padStart(2, '0');
             const dateStr = `${year}-${mStr}-${dStr}`;
 
             let classes = 'datepicker-day-cell';
@@ -2975,6 +3341,11 @@ document.addEventListener('DOMContentLoaded', () => {
             attemptLogin()
                 .then(data => {
                     if (data && data.status === 'success' && data.token) {
+                        isPreviewMode = false;
+                        sessionStorage.removeItem('bbm_preview_mode');
+                        const banner = document.getElementById('previewBanner');
+                        if (banner) banner.style.display = 'none';
+
                         setAuthToken(data.token);
                         setSavedPassword(password); // Simpan password aman di perangkat untuk auto-login
                         if (data.nota) {
@@ -3027,12 +3398,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentActiveToken = getAuthToken();
 
     if (currentActiveToken || savedPasswordOnDevice) {
+        isPreviewMode = false;
+        sessionStorage.removeItem('bbm_preview_mode');
         showMainApp();
         const pwdInput = document.getElementById('loginPassword');
         if (pwdInput && savedPasswordOnDevice) {
             pwdInput.value = savedPasswordOnDevice;
         }
         muatDataDariSpreadsheet();
+    } else if (sessionStorage.getItem('bbm_preview_mode') === 'true') {
+        enterPreviewMode();
     } else {
         showLoginScreen();
     }
@@ -3142,7 +3517,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const plat = document.getElementById('platPemohon').value;
             const bbm = document.getElementById('bbmPemohon').value;
             const kupon = parseInt(document.getElementById('jmlKuponAmbil').value, 10) || 1;
-            const id = "REQ-" + Date.now().toString().slice(-4);
+            const id = `REQ-${(`${Date.now()}`).slice(-4)}`;
 
             const payload = { id, tanggal, pemohon, plat, bbm, kupon, status: "PENDING" };
             databaseIntransit.unshift(payload);

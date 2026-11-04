@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bbm-kppd-v22';
+const CACHE_NAME = 'bbm-kppd-v24';
 const STATIC_ASSETS = [
     './',
     './index.html',
@@ -73,13 +73,7 @@ self.addEventListener('notificationclick', event => {
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
             if (clientList.length > 0) {
-                let client = clientList[0];
-                for (let i = 0; i < clientList.length; i++) {
-                    if (clientList[i].focused) {
-                        client = clientList[i];
-                        break;
-                    }
-                }
+                const client = clientList.find(c => c.focused) || clientList[0];
                 return client.focus();
             }
             return clients.openWindow('./index.html');
